@@ -36,6 +36,7 @@ def main():
     query_parser.add_argument('question', help='Question to ask')
     query_parser.add_argument('--db-path', default='./data/vector_db', help='Vector database path')
     query_parser.add_argument('--n-results', type=int, default=5, help='Number of results to retrieve')
+    query_parser.add_argument('--model', default='microsoft/DialoGPT-medium', help='Hugging Face model name')
     
     # Stats command
     stats_parser = subparsers.add_parser('stats', help='Show system statistics')
@@ -56,7 +57,7 @@ def main():
             print(f"Successfully added documents from {args.path}")
             
         elif args.command == 'query':
-            rag = RAGSystem(vector_db_path=args.db_path)
+            rag = RAGSystem(vector_db_path=args.db_path, generation_model=args.model)
             result = rag.query(args.question, n_results=args.n_results)
             
             print(f"\nQuestion: {result['question']}")

@@ -24,8 +24,6 @@ Building a Retrieval-Augmented Generation (RAG) tool that combines document retr
 - [x] Add vector database integration
 
 ### Phase 4: Interface & API
-- [ ] Implement user interface and API endpoints
-- [ ] Create web interface for document upload and querying
 - [x] Add command-line interface
 - [x] Implement Python API for programmatic access
 
@@ -54,10 +52,9 @@ Building a Retrieval-Augmented Generation (RAG) tool that combines document retr
 
 ## Dependencies
 - Python 3.8+
-- OpenAI API key (for text generation)
-- Vector database (ChromaDB or Pinecone)
-- Web framework (FastAPI or Flask)
-- Frontend framework (React or Vue.js)
+- Local language model (downloaded automatically)
+- ChromaDB (local SQLite-based vector database)
+- Hugging Face Transformers
 
 ---
 

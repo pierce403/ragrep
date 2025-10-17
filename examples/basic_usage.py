@@ -15,6 +15,7 @@ def main():
     
     # Initialize RAG system
     print("Initializing RAG system...")
+    print("Note: This will download a language model on first run (may take a few minutes)")
     rag = RAGSystem()
     
     # Create a sample document

@@ -17,20 +17,18 @@ class RAGSystem:
                  vector_db_path: str = "./data/vector_db",
                  chunk_size: int = 1000,
                  chunk_overlap: int = 200,
-                 openai_api_key: Optional[str] = None,
-                 generation_model: str = "gpt-3.5-turbo"):
+                 generation_model: str = "microsoft/DialoGPT-medium"):
         """Initialize RAG system.
         
         Args:
             vector_db_path: Path to store the vector database
             chunk_size: Size of document chunks
             chunk_overlap: Overlap between chunks
-            openai_api_key: OpenAI API key
-            generation_model: Model to use for text generation
+            generation_model: Hugging Face model name for text generation
         """
         self.document_processor = DocumentProcessor(chunk_size, chunk_overlap)
         self.vector_store = VectorStore(vector_db_path)
-        self.text_generator = TextGenerator(openai_api_key, generation_model)
+        self.text_generator = TextGenerator(generation_model)
         
         logger.info("RAG system initialized")
     
@@ -95,7 +93,7 @@ class RAGSystem:
         vector_stats = self.vector_store.get_collection_info()
         return {
             'vector_store': vector_stats,
-            'generation_model': self.text_generator.model,
+            'generation_model': self.text_generator.model_name,
             'chunk_size': self.document_processor.chunk_size,
             'chunk_overlap': self.document_processor.chunk_overlap
         }

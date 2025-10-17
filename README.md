@@ -8,13 +8,14 @@ RAGRep is designed to help users build sophisticated RAG applications that can s
 
 ## Features
 
+- **Fully Local**: No external API keys or remote services required
 - **Document Processing**: Automatic chunking and preprocessing of various document formats
-- **Vector Search**: Semantic search using state-of-the-art embedding models
-- **AI Generation**: Context-aware text generation using large language models
+- **Vector Search**: Semantic search using local embedding models
+- **AI Generation**: Context-aware text generation using local language models
 - **Flexible Architecture**: Modular design allowing customization of retrieval and generation components
-- **Multiple Formats**: Support for PDF, TXT, MD, and other text formats
-- **API Interface**: RESTful API for easy integration with other applications
-- **Web Interface**: User-friendly web interface for interactive usage
+- **Multiple Formats**: Support for TXT, MD, PY, JS, HTML, CSS and other text formats
+- **CLI Interface**: Command-line tool for easy usage
+- **Python API**: Programmatic access for integration into other applications
 
 ## Installation
 
@@ -43,10 +44,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Set up environment variables:
+4. Set up environment variables (optional):
 ```bash
-cp .env.example .env
-# Edit .env with your API keys and configuration
+cp env.example .env
+# Edit .env to customize model and configuration
 ```
 
 ## Usage
@@ -81,25 +82,31 @@ print(response.text)
 print(response.sources)
 ```
 
-### Web Interface
+### Python API
 
-1. Start the server:
-```bash
-python -m ragrep serve
+```python
+from ragrep import RAGSystem
+
+# Initialize the RAG system
+rag = RAGSystem()
+
+# Add documents
+rag.add_documents("./documents")
+
+# Query the system
+response = rag.query("What is the main topic of the documents?")
+print(response['answer'])
+print(f"Sources: {response['num_sources']} documents")
 ```
-
-2. Open your browser to `http://localhost:8000`
-
-3. Upload documents and start querying!
 
 ## Configuration
 
-The tool can be configured through environment variables or a configuration file:
+The tool can be configured through environment variables:
 
-- `OPENAI_API_KEY`: Your OpenAI API key for text generation
-- `EMBEDDING_MODEL`: Embedding model to use (default: text-embedding-ada-002)
+- `GENERATION_MODEL`: Hugging Face model name for text generation (default: microsoft/DialoGPT-medium)
 - `CHUNK_SIZE`: Size of document chunks (default: 1000)
 - `CHUNK_OVERLAP`: Overlap between chunks (default: 200)
+- `CUDA_AVAILABLE`: Set to "true" to use GPU acceleration (default: false)
 
 ## Architecture
 

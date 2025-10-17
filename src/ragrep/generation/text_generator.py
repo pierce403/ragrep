@@ -1,31 +1,53 @@
-"""Text generation using OpenAI API."""
+"""Text generation using local language models."""
 
 import os
 from typing import List, Dict, Any, Optional
-from openai import OpenAI
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class TextGenerator:
-    """Handles text generation using OpenAI's GPT models."""
+    """Handles text generation using local language models."""
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-3.5-turbo"):
+    def __init__(self, model_name: str = "microsoft/DialoGPT-medium"):
         """Initialize text generator.
         
         Args:
-            api_key: OpenAI API key (if None, will use environment variable)
-            model: OpenAI model to use for generation
+            model_name: Hugging Face model name for text generation
         """
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable.")
+        self.model_name = model_name
+        self.device = "cuda" if os.getenv("CUDA_AVAILABLE", "false").lower() == "true" else "cpu"
         
-        self.client = OpenAI(api_key=self.api_key)
-        self.model = model
-        
-        logger.info(f"Initialized text generator with model: {model}")
+        try:
+            # Load model and tokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model = AutoModelForCausalLM.from_pretrained(model_name)
+            
+            # Add padding token if it doesn't exist
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            
+            # Create text generation pipeline
+            self.generator = pipeline(
+                "text-generation",
+                model=self.model,
+                tokenizer=self.tokenizer,
+                device=0 if self.device == "cuda" else -1,
+                max_length=512,
+                do_sample=True,
+                temperature=0.7,
+                pad_token_id=self.tokenizer.eos_token_id
+            )
+            
+            logger.info(f"Initialized text generator with model: {model_name} on {self.device}")
+            
+        except Exception as e:
+            logger.error(f"Failed to load model {model_name}: {e}")
+            # Fallback to a simpler approach
+            self.generator = None
+            logger.warning("Using fallback text generation (no AI model)")
     
     def generate_response(self, query: str, context_documents: List[Dict[str, Any]]) -> str:
         """Generate a response based on query and context documents.
@@ -43,24 +65,32 @@ class TextGenerator:
         # Create the prompt
         prompt = self._create_prompt(query, context_text)
         
+        if self.generator is None:
+            # Fallback: return a simple response based on context
+            return self._fallback_response(query, context_documents)
+        
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided context. Use only the information from the context to answer questions. If the context doesn't contain enough information to answer the question, say so."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=500,
-                temperature=0.7
+            # Generate response using local model
+            response = self.generator(
+                prompt,
+                max_length=min(len(prompt.split()) + 100, 512),
+                num_return_sequences=1,
+                temperature=0.7,
+                do_sample=True,
+                pad_token_id=self.tokenizer.eos_token_id
             )
             
-            generated_text = response.choices[0].message.content
+            generated_text = response[0]['generated_text']
+            # Extract only the new generated part (after the prompt)
+            if generated_text.startswith(prompt):
+                generated_text = generated_text[len(prompt):].strip()
+            
             logger.info("Generated response successfully")
             return generated_text
             
         except Exception as e:
             logger.error(f"Error generating response: {e}")
-            raise
+            return self._fallback_response(query, context_documents)
     
     def _prepare_context(self, documents: List[Dict[str, Any]]) -> str:
         """Prepare context text from retrieved documents.
@@ -79,6 +109,37 @@ class TextGenerator:
         
         return "\n".join(context_parts)
     
+    def _fallback_response(self, query: str, context_documents: List[Dict[str, Any]]) -> str:
+        """Fallback response when no AI model is available.
+        
+        Args:
+            query: User's question
+            context_documents: Retrieved documents
+            
+        Returns:
+            Simple response based on context
+        """
+        if not context_documents:
+            return f"I found no relevant information to answer: {query}"
+        
+        # Simple keyword-based response
+        context_text = " ".join([doc['text'] for doc in context_documents])
+        query_words = query.lower().split()
+        
+        # Find sentences that contain query words
+        sentences = context_text.split('.')
+        relevant_sentences = []
+        
+        for sentence in sentences:
+            sentence_lower = sentence.lower()
+            if any(word in sentence_lower for word in query_words if len(word) > 3):
+                relevant_sentences.append(sentence.strip())
+        
+        if relevant_sentences:
+            return f"Based on the available information: {' '.join(relevant_sentences[:3])}"
+        else:
+            return f"I found some relevant documents but couldn't extract a direct answer to: {query}"
+    
     def _create_prompt(self, query: str, context: str) -> str:
         """Create the prompt for the language model.
         
@@ -89,9 +150,8 @@ class TextGenerator:
         Returns:
             Formatted prompt
         """
-        return f"""Based on the following context documents, please answer the question: {query}
+        return f"""Question: {query}
 
-Context:
-{context}
+Context: {context}
 
 Answer:"""
