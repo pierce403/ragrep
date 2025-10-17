@@ -55,14 +55,14 @@ cp env.example .env
 ### Command Line Interface
 
 ```bash
-# Process documents and create knowledge base
-python -m ragrep index --input-dir ./documents --output-dir ./knowledge_base
+# Index documents into knowledge base
+ragrep index ./documents
 
 # Query the knowledge base
-python -m ragrep query "What is machine learning?" --knowledge-base ./knowledge_base
+ragrep query "What is machine learning?"
 
-# Start the web interface
-python -m ragrep serve --port 8000
+# Show system statistics
+ragrep stats
 ```
 
 ### Python API

@@ -23,10 +23,10 @@ def main():
     parser = argparse.ArgumentParser(description="RAGRep - Retrieval-Augmented Generation Tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
-    # Add documents command
-    add_parser = subparsers.add_parser('add', help='Add documents to knowledge base')
-    add_parser.add_argument('path', help='Path to document or directory')
-    add_parser.add_argument('--db-path', default='./data/vector_db', help='Vector database path')
+    # Index documents command
+    index_parser = subparsers.add_parser('index', help='Index documents into knowledge base')
+    index_parser.add_argument('path', help='Path to document or directory')
+    index_parser.add_argument('--db-path', default='./data/vector_db', help='Vector database path')
     
     # Query command
     query_parser = subparsers.add_parser('query', help='Query the knowledge base')
@@ -48,10 +48,10 @@ def main():
     setup_logging()
     
     try:
-        if args.command == 'add':
+        if args.command == 'index':
             rag = RAGSystem(vector_db_path=args.db_path)
             rag.add_documents(args.path)
-            print(f"Successfully added documents from {args.path}")
+            print(f"Successfully indexed documents from {args.path}")
             
         elif args.command == 'query':
             rag = RAGSystem(vector_db_path=args.db_path, generation_model=args.model)
