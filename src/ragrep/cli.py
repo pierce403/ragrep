@@ -31,22 +31,17 @@ def main():
     index_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     index_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
     
-    # Query command
-    query_parser = subparsers.add_parser('query', help='Query the knowledge base')
-    query_parser.add_argument('question', help='Question to ask')
-    query_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
-    query_parser.add_argument('--n-results', type=int, default=5, help='Number of results to retrieve')
-    query_parser.add_argument('--model', default='microsoft/DialoGPT-medium', help='Hugging Face model name')
-    
     # Dump command
     dump_parser = subparsers.add_parser('dump', help='Dump knowledge base contents matching query (no LLM processing)')
     dump_parser.add_argument('query', help='Query to search for relevant chunks')
     dump_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     dump_parser.add_argument('--limit', type=int, default=20, help='Maximum number of chunks to show (default: 20)')
+    dump_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
     
     # Stats command
     stats_parser = subparsers.add_parser('stats', help='Show system statistics')
     stats_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
+    stats_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
     
     args = parser.parse_args()
 
@@ -115,19 +110,6 @@ def main():
             if verbose:
                 print(f"📊 Use 'ragrep stats' to see database statistics")
             
-        elif args.command == 'query':
-            from .core.rag_system import RAGSystem
-            rag = RAGSystem(vector_db_path=args.db_path, generation_model=args.model)
-            result = rag.query(args.question, n_results=args.n_results)
-            
-            print(f"\nQuestion: {result['question']}")
-            print(f"Answer: {result['answer']}")
-            print(f"\nSources ({result['num_sources']}):")
-            for i, source in enumerate(result['sources'], 1):
-                print(f"{i}. {source['metadata'].get('filename', 'Unknown')}")
-                print(f"   {source['text']}")
-                print()
-        
         elif args.command == 'dump':
             # Only initialize vector store for dump command
             from .retrieval.vector_store import VectorStore
