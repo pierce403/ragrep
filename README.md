@@ -1,30 +1,27 @@
-# RAGRep - Retrieval-Augmented Generation Tool
+# RAGRep - AI Agent File Navigator
 
-A powerful tool for implementing Retrieval-Augmented Generation (RAG) systems that combines document retrieval with AI-powered text generation.
+A command-line tool similar to `grep`, but designed for AI agents to index and navigate files/code using semantic search.
 
 ## Overview
 
-RAGRep is designed to help users build sophisticated RAG applications that can search through documents and generate contextually relevant responses. The tool provides a comprehensive framework for implementing retrieval-augmented generation systems with modern AI capabilities.
+RAGRep is a specialized command-line tool that enables AI agents to efficiently search and understand codebases through semantic indexing. Unlike traditional `grep` which searches for exact text matches, RAGRep uses vector embeddings to find semantically related content, making it perfect for AI agents that need to understand context and meaning.
 
 ## Features
 
+- **Semantic Search**: Find content by meaning, not just exact text matches
+- **AI Agent Optimized**: Designed specifically for AI agents to navigate codebases
 - **Fully Local**: No external API keys or remote services required
-- **Document Processing**: Automatic chunking and preprocessing of various document formats
-- **Vector Search**: Semantic search using local embedding models
-- **AI Generation**: Context-aware text generation using local language models
-- **Knowledge Base Inspection**: Semantic search dump command for LLM-ready context extraction
-- **Flexible Architecture**: Modular design allowing customization of retrieval and generation components
-- **Multiple Formats**: Support for TXT, MD, PY, JS, HTML, CSS and other text formats
-- **CLI Interface**: Command-line tool for easy usage
-- **Python API**: Programmatic access for integration into other applications
+- **Fast Indexing**: Efficiently processes and indexes code files
+- **Multiple Formats**: Supports TXT, MD, PY, JS, HTML, CSS and other text formats
+- **Git Integration**: Respects `.gitignore` patterns automatically
+- **LLM-Ready Output**: Structured output perfect for feeding into other AI models
 
 ## Installation
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- pip or conda package manager
-- Git
+- pip package manager
 
 ### Setup
 
@@ -40,90 +37,154 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install dependencies:
+3. Install the tool:
 ```bash
-pip install -r requirements.txt
-```
-
-4. Set up environment variables (optional):
-```bash
-cp env.example .env
-# Edit .env to customize model and configuration
+pip install -e .
 ```
 
 ## Usage
 
-### Command Line Interface
+### Basic Commands
 
 ```bash
-# Index documents in current directory
+# Index the current directory for semantic search
 ragrep index
 
-# Index documents in specific directory
-ragrep index ./documents
+# Index a specific directory
+ragrep index ./src
 
-# Query the knowledge base
-ragrep query "What is machine learning?"
+# Search for semantically related content
+ragrep dump "authentication logic" --limit 10
 
-# Dump knowledge base contents matching query (no LLM processing)
-ragrep dump "machine learning" --limit 10
+# Get AI-generated answers about the codebase
+ragrep query "How does user authentication work?"
 
-# Show system statistics
+# Show indexing statistics
 ragrep stats
 ```
 
-### Knowledge Base Dump
+### Command Reference
 
-The `dump` command provides semantic search without LLM processing, perfect for feeding context directly into other LLMs:
+#### `ragrep index [path]`
+Index files for semantic search. If no path is provided, indexes the current directory.
 
 ```bash
-# Search for relevant chunks
-ragrep dump "vector database" --limit 5
+# Index current directory
+ragrep index
 
-# Output is structured for LLM consumption:
-# # Knowledge Base Dump for Query: 'vector database'
-# # Found 5 relevant chunks
-# ================================================================================
-# 
-# ## Chunk 1 (Similarity: 1.073)
-# **Source:** `src/ragrep/retrieval/vector_store.py`
-# **Content:**
-# """Vector storage and retrieval functionality."""
-# ...
+# Index specific directory
+ragrep index ./src
+
+# Index with verbose output
+ragrep index -v
 ```
 
-### Python API
+#### `ragrep dump <query> [options]`
+Search for semantically related content and output in LLM-ready format.
 
-```python
-from ragrep import RAGSystem
+```bash
+# Basic search
+ragrep dump "database connection"
 
-# Initialize the RAG system
-rag = RAGSystem()
+# Limit results
+ragrep dump "error handling" --limit 5
 
-# Add documents
-rag.add_documents("./documents")
-
-# Query the system
-response = rag.query("What is the main topic of the documents?")
-print(response.text)
-print(response.sources)
+# Search with verbose output
+ragrep dump "API endpoints" -v
 ```
 
-### Python API
+**Output Format:**
+```
+# Knowledge Base Dump for Query: 'database connection'
+# Found 3 relevant chunks
+================================================================================
 
-```python
-from ragrep import RAGSystem
+## Chunk 1 (Similarity: 0.892)
+**Source:** `src/database/connection.py`
+**Content:**
+"""Database connection management and pooling functionality."""
+...
 
-# Initialize the RAG system
-rag = RAGSystem()
+## Chunk 2 (Similarity: 0.756)
+**Source:** `src/config/database.py`
+**Content:**
+"""Database configuration and connection parameters."""
+...
+```
 
-# Add documents
-rag.add_documents("./documents")
+#### `ragrep query <question> [options]`
+Ask questions about the codebase and get AI-generated answers.
 
-# Query the system
-response = rag.query("What is the main topic of the documents?")
-print(response['answer'])
-print(f"Sources: {response['num_sources']} documents")
+```bash
+# Basic question
+ragrep query "How does the authentication system work?"
+
+# Specify number of context chunks
+ragrep query "What are the main API endpoints?" --n-results 10
+
+# Use different AI model
+ragrep query "Explain the database schema" --model microsoft/DialoGPT-medium
+```
+
+#### `ragrep stats [options]`
+Show statistics about the indexed knowledge base.
+
+```bash
+# Basic stats
+ragrep stats
+
+# Verbose output
+ragrep stats -v
+```
+
+**Output:**
+```
+📊 RAG System Statistics:
+========================================
+🗄️  Database: ./.ragrep.db
+📚 Documents in vector store: 47
+
+📁 Directory Scan:
+📄 Indexable files found: 23
+💾 Total size: 45,231 bytes
+```
+
+## Use Cases for AI Agents
+
+### Code Understanding
+```bash
+# Understand a specific feature
+ragrep dump "user registration flow" --limit 5
+
+# Find related functions
+ragrep dump "password hashing" --limit 3
+
+# Explore error handling patterns
+ragrep dump "exception handling" --limit 10
+```
+
+### Documentation Generation
+```bash
+# Get overview of a module
+ragrep query "What does the authentication module do?"
+
+# Understand API structure
+ragrep dump "API routes" --limit 15
+
+# Find configuration options
+ragrep dump "configuration settings" --limit 8
+```
+
+### Debugging Support
+```bash
+# Find error-related code
+ragrep dump "error logging" --limit 5
+
+# Understand data flow
+ragrep query "How does data flow from API to database?"
+
+# Find test cases
+ragrep dump "unit tests" --limit 10
 ```
 
 ## Configuration
@@ -135,26 +196,51 @@ The tool can be configured through environment variables:
 - `CHUNK_OVERLAP`: Overlap between chunks (default: 200)
 - `CUDA_AVAILABLE`: Set to "true" to use GPU acceleration (default: false)
 
-## Architecture
+## How It Works
 
+1. **Indexing**: Files are processed and chunked into semantic units
+2. **Embedding**: Each chunk is converted to a vector embedding
+3. **Storage**: Embeddings are stored in a local SQLite database
+4. **Search**: Queries are converted to embeddings and matched against stored chunks
+5. **Output**: Results are formatted for easy consumption by AI agents
+
+## Comparison with grep
+
+| Feature | grep | RAGRep |
+|---------|------|--------|
+| Search Type | Exact text matching | Semantic similarity |
+| AI Agent Friendly | Limited | Optimized |
+| Context Understanding | None | High |
+| Code Navigation | Basic | Advanced |
+| Learning Curve | Low | Medium |
+
+## Examples
+
+### Finding Authentication Code
+```bash
+# Traditional grep approach
+grep -r "authenticate" src/
+
+# RAGRep semantic approach
+ragrep dump "user authentication system" --limit 5
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Documents     │───▶│  Preprocessing  │───▶│  Vector Store   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                       │
-┌─────────────────┐    ┌─────────────────┐           │
-│   User Query    │───▶│   Retrieval     │◀──────────┘
-└─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │   Generation    │
-                       └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │   Response      │
-                       └─────────────────┘
+
+### Understanding Database Layer
+```bash
+# Get AI explanation
+ragrep query "How is the database layer structured?"
+
+# Find related code
+ragrep dump "database models and schemas" --limit 8
+```
+
+### Exploring API Endpoints
+```bash
+# Find all API-related code
+ragrep dump "REST API endpoints" --limit 10
+
+# Understand API structure
+ragrep query "What are the main API endpoints and their purposes?"
 ```
 
 ## Development
@@ -164,16 +250,14 @@ The tool can be configured through environment variables:
 ```
 ragrep/
 ├── src/
-│   ├── ragrep/
-│   │   ├── core/          # Core RAG functionality
-│   │   ├── retrieval/     # Document retrieval modules
-│   │   ├── generation/    # Text generation modules
-│   │   ├── api/          # API endpoints
-│   │   └── web/          # Web interface
-├── tests/                # Test suite
-├── docs/                 # Documentation and research
+│   └── ragrep/
+│       ├── core/          # Core functionality
+│       ├── retrieval/     # Vector search
+│       ├── generation/    # AI text generation
+│       └── cli.py         # Command-line interface
 ├── examples/             # Usage examples
-└── requirements.txt      # Python dependencies
+├── docs/                 # Documentation
+└── requirements.txt      # Dependencies
 ```
 
 ### Running Tests
@@ -182,31 +266,17 @@ ragrep/
 pytest tests/
 ```
 
-### Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-
-- OpenAI for providing the GPT models
-- Hugging Face for the transformer models
-- The open-source community for various libraries and tools
-
 ## Support
 
-For questions, issues, or contributions, please:
+For questions, issues, or contributions:
 - Open an issue on GitHub
-- Check the documentation in the `docs/` directory
-- Review the examples in the `examples/` directory
+- Check the examples in the `examples/` directory
+- Review the documentation in the `docs/` directory
 
 ---
 
-*RAGRep - Making RAG accessible and powerful for everyone.*
+*RAGRep - Making codebases navigable for AI agents through semantic search.*
