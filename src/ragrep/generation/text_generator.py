@@ -22,14 +22,19 @@ class TextGenerator:
         
         try:
             # Load model and tokenizer
+            logger.info(f"Downloading and loading model: {model_name}")
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            logger.info("Tokenizer loaded successfully")
+            
             self.model = AutoModelForCausalLM.from_pretrained(model_name)
+            logger.info("Model loaded successfully")
             
             # Add padding token if it doesn't exist
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
             
             # Create text generation pipeline
+            logger.info("Setting up text generation pipeline...")
             self.generator = pipeline(
                 "text-generation",
                 model=self.model,
@@ -41,7 +46,7 @@ class TextGenerator:
                 pad_token_id=self.tokenizer.eos_token_id
             )
             
-            logger.info(f"Initialized text generator with model: {model_name} on {self.device}")
+            logger.info(f"Text generator ready with model: {model_name} on {self.device}")
             
         except Exception as e:
             logger.error(f"Failed to load model {model_name}: {e}")

@@ -185,18 +185,23 @@ class DocumentProcessor:
         # Supported file extensions
         text_extensions = {'.txt', '.md', '.py', '.js', '.html', '.css'}
         
+        files_to_process = []
         for file_path in directory.rglob('*'):
             if file_path.is_file() and file_path.suffix.lower() in text_extensions:
                 # Check if file should be ignored
                 if self._should_ignore(file_path):
-                    logger.info(f"Ignoring file: {file_path}")
                     continue
-                    
-                try:
-                    chunks = self.process_document(str(file_path))
-                    all_chunks.extend(chunks)
-                except Exception as e:
-                    logger.warning(f"Failed to process {file_path}: {e}")
+                files_to_process.append(file_path)
+        
+        logger.info(f"Found {len(files_to_process)} files to process")
+        
+        for i, file_path in enumerate(files_to_process, 1):
+            logger.info(f"Processing file {i}/{len(files_to_process)}: {file_path.name}")
+            try:
+                chunks = self.process_document(str(file_path))
+                all_chunks.extend(chunks)
+            except Exception as e:
+                logger.warning(f"Failed to process {file_path}: {e}")
                     
         logger.info(f"Processed {len(all_chunks)} chunks from {directory_path}")
         return all_chunks

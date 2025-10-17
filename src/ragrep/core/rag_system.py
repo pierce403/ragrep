@@ -26,11 +26,18 @@ class RAGSystem:
             chunk_overlap: Overlap between chunks
             generation_model: Hugging Face model name for text generation
         """
+        logger.info("Initializing RAG system components...")
+        
+        logger.info("Setting up document processor...")
         self.document_processor = DocumentProcessor(chunk_size, chunk_overlap)
+        
+        logger.info("Setting up vector database...")
         self.vector_store = VectorStore(vector_db_path)
+        
+        logger.info("Loading language model (this may take a moment on first run)...")
         self.text_generator = TextGenerator(generation_model)
         
-        logger.info("RAG system initialized")
+        logger.info("RAG system initialized successfully")
     
     def add_documents(self, file_path: str) -> None:
         """Add documents to the knowledge base.

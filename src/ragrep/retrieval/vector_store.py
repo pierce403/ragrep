@@ -41,6 +41,12 @@ class VectorStore:
         Args:
             chunks: List of document chunks with text and metadata
         """
+        if not chunks:
+            logger.warning("No chunks to add")
+            return
+            
+        logger.info(f"Adding {len(chunks)} chunks to vector database...")
+        
         texts = [chunk['text'] for chunk in chunks]
         metadatas = [chunk['metadata'] for chunk in chunks]
         ids = [f"chunk_{i}" for i in range(len(chunks))]
@@ -51,7 +57,7 @@ class VectorStore:
             ids=ids
         )
         
-        logger.info(f"Added {len(chunks)} chunks to vector store")
+        logger.info(f"Successfully added {len(chunks)} chunks to vector store")
     
     def search(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
         """Search for similar documents.
