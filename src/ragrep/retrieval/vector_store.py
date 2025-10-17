@@ -22,7 +22,8 @@ class VectorStore:
         os.makedirs(persist_directory, exist_ok=True)
         
         # Initialize ChromaDB
-        print("   🔄 Initializing ChromaDB vector database...")
+        if logger.isEnabledFor(logging.DEBUG):
+            print("   🔄 Initializing ChromaDB vector database...")
         logger.info("Initializing ChromaDB vector database...")
         self.client = chromadb.PersistentClient(
             path=persist_directory,
@@ -30,14 +31,16 @@ class VectorStore:
         )
         
         # Get or create collection
-        print("   🔄 Setting up document collection...")
+        if logger.isEnabledFor(logging.DEBUG):
+            print("   🔄 Setting up document collection...")
         logger.info("Setting up document collection...")
         self.collection = self.client.get_or_create_collection(
             name="ragrep_documents",
             metadata={"description": "RAGRep document collection"}
         )
         
-        print("   ✅ ChromaDB ready!")
+        if logger.isEnabledFor(logging.DEBUG):
+            print("   ✅ ChromaDB ready!")
         logger.info(f"Initialized vector store at {persist_directory}")
     
     def add_documents(self, chunks: List[Dict[str, Any]]) -> None:
@@ -50,8 +53,9 @@ class VectorStore:
             logger.warning("No chunks to add")
             return
             
-        print(f"💾 Adding {len(chunks)} chunks to vector database...")
-        print("   🔄 ChromaDB is generating embeddings (this may take a moment)...")
+        if logger.isEnabledFor(logging.DEBUG):
+            print(f"💾 Adding {len(chunks)} chunks to vector database...")
+            print("   🔄 ChromaDB is generating embeddings (this may take a moment)...")
         logger.info(f"Adding {len(chunks)} chunks to vector database...")
         
         texts = [chunk['text'] for chunk in chunks]
@@ -65,8 +69,9 @@ class VectorStore:
             ids=ids
         )
         
-        print("   🔄 Building search index...")
-        print(f"✅ Successfully added {len(chunks)} chunks to vector store")
+        if logger.isEnabledFor(logging.DEBUG):
+            print("   🔄 Building search index...")
+            print(f"✅ Successfully added {len(chunks)} chunks to vector store")
         logger.info(f"Successfully added {len(chunks)} chunks to vector store")
     
     def search(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
@@ -79,7 +84,8 @@ class VectorStore:
         Returns:
             List of similar documents with metadata
         """
-        print(f"🔍 Searching vector database for: '{query}'...")
+        if logger.isEnabledFor(logging.DEBUG):
+            print(f"🔍 Searching vector database for: '{query}'...")
         logger.info(f"Searching for: {query}")
         
         results = self.collection.query(

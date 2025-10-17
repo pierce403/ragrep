@@ -22,9 +22,6 @@ def setup_logging(verbose=False):
 
 def main():
     """Main CLI entry point."""
-    import time
-    print(f"🚀 RAGRep CLI starting... [{time.strftime('%H:%M:%S')}]")
-    
     parser = argparse.ArgumentParser(description="RAGRep - Retrieval-Augmented Generation Tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
@@ -52,65 +49,71 @@ def main():
     stats_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     
     args = parser.parse_args()
-    print(f"📋 Arguments parsed... [{time.strftime('%H:%M:%S')}]")
 
     if not args.command:
         parser.print_help()
         return
 
-    # Set up logging with verbose mode for index command
+    # Set up logging with verbose mode
     verbose = getattr(args, 'verbose', False)
-    print(f"⚙️  Setting up logging... [{time.strftime('%H:%M:%S')}]")
     setup_logging(verbose=verbose)
-    print(f"✅ Logging ready... [{time.strftime('%H:%M:%S')}]")
     
     try:
         if args.command == 'index':
             import time
             start_time = time.time()
             
-            print(f"🚀 Starting indexing process... [{time.strftime('%H:%M:%S')}]")
-            print(f"📁 Target path: {args.path}")
-            print(f"🗄️  Database: {args.db_path}")
-            print("=" * 60)
-            print("⚙️  Initializing indexing components...")
-            print("   📄 Setting up document processor...")
+            if verbose:
+                print(f"🚀 Starting indexing process... [{time.strftime('%H:%M:%S')}]")
+                print(f"📁 Target path: {args.path}")
+                print(f"🗄️  Database: {args.db_path}")
+                print("=" * 60)
+                print("⚙️  Initializing indexing components...")
+                print("   📄 Setting up document processor...")
             
             doc_start = time.time()
             # Only load document processor first - no vector store yet!
             from .core.document_processor import DocumentProcessor
-            print(f"   ✅ DocumentProcessor imported [{time.time() - doc_start:.2f}s]")
+            if verbose:
+                print(f"   ✅ DocumentProcessor imported [{time.time() - doc_start:.2f}s]")
+                print("   📄 Setting up document processor...")
             
-            print("   📄 Setting up document processor...")
             processor_start = time.time()
             document_processor = DocumentProcessor()
-            print(f"   ✅ DocumentProcessor created [{time.time() - processor_start:.2f}s]")
-            
-            print(f"✅ Document processing ready! [{time.time() - start_time:.2f}s total]")
-            print("=" * 60)
+            if verbose:
+                print(f"   ✅ DocumentProcessor created [{time.time() - processor_start:.2f}s]")
+                print(f"✅ Document processing ready! [{time.time() - start_time:.2f}s total]")
+                print("=" * 60)
             
             # Process documents first (lightweight)
             process_start = time.time()
-            print(f"📄 Starting document processing... [{time.strftime('%H:%M:%S')}]")
+            if verbose:
+                print(f"📄 Starting document processing... [{time.strftime('%H:%M:%S')}]")
             chunks = document_processor.process_directory(args.path)
-            print(f"✅ Document processing complete [{time.time() - process_start:.2f}s]")
+            if verbose:
+                print(f"✅ Document processing complete [{time.time() - process_start:.2f}s]")
             
             # Only now load vector store when we have documents to process
             vector_start = time.time()
-            print(f"💾 Loading vector database... [{time.strftime('%H:%M:%S')}]")
+            if verbose:
+                print(f"💾 Loading vector database... [{time.strftime('%H:%M:%S')}]")
             from .retrieval.vector_store import VectorStore
             vector_store = VectorStore(args.db_path)
-            print(f"✅ Vector store ready [{time.time() - vector_start:.2f}s]")
+            if verbose:
+                print(f"✅ Vector store ready [{time.time() - vector_start:.2f}s]")
             
             # Add documents to vector store
             vector_add_start = time.time()
-            print(f"💾 Adding documents to vector store... [{time.strftime('%H:%M:%S')}]")
+            if verbose:
+                print(f"💾 Adding documents to vector store... [{time.strftime('%H:%M:%S')}]")
             vector_store.add_documents(chunks)
-            print(f"✅ Vector store operations complete [{time.time() - vector_add_start:.2f}s]")
+            if verbose:
+                print(f"✅ Vector store operations complete [{time.time() - vector_add_start:.2f}s]")
+                print("=" * 60)
             
-            print("=" * 60)
-            print(f"✅ Successfully indexed documents from {args.path}")
-            print(f"📊 Use 'ragrep stats' to see database statistics")
+            print(f"✅ Successfully indexed {len(chunks)} chunks from {args.path}")
+            if verbose:
+                print(f"📊 Use 'ragrep stats' to see database statistics")
             
         elif args.command == 'query':
             from .core.rag_system import RAGSystem

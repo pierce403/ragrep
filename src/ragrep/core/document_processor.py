@@ -25,11 +25,14 @@ class DocumentProcessor:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         
-        print(f"      🔄 Loading .gitignore patterns... [{time.strftime('%H:%M:%S')}]")
+        # Only show detailed output if logging level is DEBUG (verbose mode)
+        if logger.isEnabledFor(logging.DEBUG):
+            print(f"      🔄 Loading .gitignore patterns... [{time.strftime('%H:%M:%S')}]")
         gitignore_start = time.time()
         self.ignore_patterns = self._load_gitignore_patterns()
-        print(f"      ✅ .gitignore patterns loaded [{time.time() - gitignore_start:.2f}s]")
-        print(f"      ✅ DocumentProcessor ready [{time.time() - start_time:.2f}s total]")
+        if logger.isEnabledFor(logging.DEBUG):
+            print(f"      ✅ .gitignore patterns loaded [{time.time() - gitignore_start:.2f}s]")
+            print(f"      ✅ DocumentProcessor ready [{time.time() - start_time:.2f}s total]")
         
     def _load_gitignore_patterns(self) -> List[str]:
         """Load .gitignore patterns from the current directory and parent directories."""
@@ -201,20 +204,25 @@ class DocumentProcessor:
                     continue
                 files_to_process.append(file_path)
         
-        print(f"📄 Found {len(files_to_process)} files to process")
+        if logger.isEnabledFor(logging.DEBUG):
+            print(f"📄 Found {len(files_to_process)} files to process")
         logger.info(f"Found {len(files_to_process)} files to process")
         
         for i, file_path in enumerate(files_to_process, 1):
-            print(f"📝 Processing file {i}/{len(files_to_process)}: {file_path.name}")
+            if logger.isEnabledFor(logging.DEBUG):
+                print(f"📝 Processing file {i}/{len(files_to_process)}: {file_path.name}")
             logger.info(f"Processing file {i}/{len(files_to_process)}: {file_path.name}")
             try:
                 chunks = self.process_document(str(file_path))
                 all_chunks.extend(chunks)
-                print(f"   ✅ Created {len(chunks)} chunks")
+                if logger.isEnabledFor(logging.DEBUG):
+                    print(f"   ✅ Created {len(chunks)} chunks")
             except Exception as e:
-                print(f"   ❌ Failed to process: {e}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    print(f"   ❌ Failed to process: {e}")
                 logger.warning(f"Failed to process {file_path}: {e}")
-                    
-        print(f"📊 Processed {len(all_chunks)} total chunks from {len(files_to_process)} files")
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            print(f"📊 Processed {len(all_chunks)} total chunks from {len(files_to_process)} files")
         logger.info(f"Processed {len(all_chunks)} chunks from {directory_path}")
         return all_chunks
