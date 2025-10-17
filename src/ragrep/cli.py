@@ -77,29 +77,34 @@ def main():
             print("   📄 Setting up document processor...")
             
             doc_start = time.time()
-            # Only load what we need for indexing - no language model!
+            # Only load document processor first - no vector store yet!
             from .core.document_processor import DocumentProcessor
-            from .retrieval.vector_store import VectorStore
             print(f"   ✅ DocumentProcessor imported [{time.time() - doc_start:.2f}s]")
             
-            print("   🗄️  Setting up vector database...")
-            vector_start = time.time()
+            print("   📄 Setting up document processor...")
+            processor_start = time.time()
             document_processor = DocumentProcessor()
-            print(f"   ✅ DocumentProcessor created [{time.time() - vector_start:.2f}s]")
+            print(f"   ✅ DocumentProcessor created [{time.time() - processor_start:.2f}s]")
             
-            vector_store = VectorStore(args.db_path)
-            print(f"✅ Indexing components ready! [{time.time() - start_time:.2f}s total]")
+            print(f"✅ Document processing ready! [{time.time() - start_time:.2f}s total]")
             print("=" * 60)
             
-            # Process documents
+            # Process documents first (lightweight)
             process_start = time.time()
             print(f"📄 Starting document processing... [{time.strftime('%H:%M:%S')}]")
             chunks = document_processor.process_directory(args.path)
             print(f"✅ Document processing complete [{time.time() - process_start:.2f}s]")
             
-            # Add to vector store
+            # Only now load vector store when we have documents to process
+            vector_start = time.time()
+            print(f"💾 Loading vector database... [{time.strftime('%H:%M:%S')}]")
+            from .retrieval.vector_store import VectorStore
+            vector_store = VectorStore(args.db_path)
+            print(f"✅ Vector store ready [{time.time() - vector_start:.2f}s]")
+            
+            # Add documents to vector store
             vector_add_start = time.time()
-            print(f"💾 Starting vector store operations... [{time.strftime('%H:%M:%S')}]")
+            print(f"💾 Adding documents to vector store... [{time.strftime('%H:%M:%S')}]")
             vector_store.add_documents(chunks)
             print(f"✅ Vector store operations complete [{time.time() - vector_add_start:.2f}s]")
             
@@ -140,15 +145,43 @@ def main():
                 print("-" * 40)
                 
         elif args.command == 'stats':
-            # Only initialize vector store for stats command
-            from .retrieval.vector_store import VectorStore
-            vector_store = VectorStore(args.db_path)
-            collection_info = vector_store.get_collection_info()
+            print("📊 RAG System Statistics:")
+            print("=" * 40)
             
-            print("RAG System Statistics:")
-            print(f"Database path: {collection_info['persist_directory']}")
-            print(f"Collection name: {collection_info['collection_name']}")
-            print(f"Documents in vector store: {collection_info['total_documents']}")
+            # Check if database exists
+            if os.path.exists(args.db_path):
+                print(f"🗄️  Database: {args.db_path}")
+                try:
+                    from .retrieval.vector_store import VectorStore
+                    vector_store = VectorStore(args.db_path)
+                    collection_info = vector_store.get_collection_info()
+                    print(f"📚 Documents in vector store: {collection_info['total_documents']}")
+                except Exception as e:
+                    print(f"⚠️  Could not read vector store: {e}")
+            else:
+                print(f"❌ No database found at: {args.db_path}")
+            
+            # Scan current directory for indexable files
+            print("\n📁 Directory Scan:")
+            from .core.file_scanner import FileScanner
+            scanner = FileScanner()
+            scan_results = scanner.scan_directory(".")
+            
+            print(f"📄 Indexable files found: {scan_results['total_files']}")
+            print(f"💾 Total size: {scan_results['total_size']:,} bytes")
+            
+            if scan_results['files']:
+                print(f"\n📋 File breakdown by type:")
+                extensions = {}
+                for file_info in scan_results['files']:
+                    ext = file_info['extension']
+                    if ext not in extensions:
+                        extensions[ext] = {'count': 0, 'size': 0}
+                    extensions[ext]['count'] += 1
+                    extensions[ext]['size'] += file_info['size']
+                
+                for ext, info in sorted(extensions.items()):
+                    print(f"   {ext}: {info['count']} files ({info['size']:,} bytes)")
             
     except Exception as e:
         print(f"Error: {e}")
