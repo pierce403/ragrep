@@ -72,8 +72,10 @@ def main():
                 print()
         
         elif args.command == 'dump':
-            rag = RAGSystem(vector_db_path=args.db_path)
-            chunks = rag.dump_chunks(args.query, limit=args.limit)
+            # Only initialize vector store for dump command
+            from .retrieval.vector_store import VectorStore
+            vector_store = VectorStore(args.db_path)
+            chunks = vector_store.search(args.query, n_results=args.limit)
             
             print(f"# Knowledge Base Dump for Query: '{args.query}'")
             print(f"# Found {len(chunks)} relevant chunks")
@@ -89,14 +91,15 @@ def main():
                 print("-" * 40)
                 
         elif args.command == 'stats':
-            rag = RAGSystem(vector_db_path=args.db_path)
-            stats = rag.get_stats()
+            # Only initialize vector store for stats command
+            from .retrieval.vector_store import VectorStore
+            vector_store = VectorStore(args.db_path)
+            collection_info = vector_store.get_collection_info()
             
             print("RAG System Statistics:")
-            print(f"Documents in vector store: {stats['vector_store']['total_documents']}")
-            print(f"Generation model: {stats['generation_model']}")
-            print(f"Chunk size: {stats['chunk_size']}")
-            print(f"Chunk overlap: {stats['chunk_overlap']}")
+            print(f"Database path: {collection_info['persist_directory']}")
+            print(f"Collection name: {collection_info['collection_name']}")
+            print(f"Documents in vector store: {collection_info['total_documents']}")
             
     except Exception as e:
         print(f"Error: {e}")
