@@ -86,6 +86,35 @@ class VectorStore:
         logger.info(f"Found {len(formatted_results)} similar documents")
         return formatted_results
     
+    def get_random_chunks(self, n_results: int = 10) -> List[Dict[str, Any]]:
+        """Get random chunks from the collection.
+        
+        Args:
+            n_results: Number of random chunks to return
+            
+        Returns:
+            List of random document chunks with metadata
+        """
+        # Get all documents and randomly sample
+        all_results = self.collection.get()
+        
+        if not all_results['documents']:
+            return []
+        
+        # Convert to our format and shuffle
+        chunks = []
+        for i in range(len(all_results['documents'])):
+            chunks.append({
+                'text': all_results['documents'][i],
+                'metadata': all_results['metadatas'][i] if all_results['metadatas'] else {},
+                'id': all_results['ids'][i] if all_results['ids'] else f"chunk_{i}"
+            })
+        
+        # Shuffle and take the requested number
+        import random
+        random.shuffle(chunks)
+        return chunks[:n_results]
+
     def get_collection_info(self) -> Dict[str, Any]:
         """Get information about the collection.
         

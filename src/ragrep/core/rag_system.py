@@ -91,6 +91,29 @@ class RAGSystem:
         logger.info(f"Processed query: {question}")
         return result
     
+    def dump_chunks(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Dump chunks from the knowledge base without LLM processing.
+        
+        Args:
+            limit: Maximum number of chunks to return
+            
+        Returns:
+            List of document chunks with metadata
+        """
+        # Get all chunks from the vector store
+        collection_info = self.vector_store.get_collection_info()
+        total_chunks = collection_info['total_documents']
+        
+        if total_chunks == 0:
+            logger.info("No chunks found in knowledge base")
+            return []
+        
+        # Get random chunks from the vector store
+        chunks = self.vector_store.get_random_chunks(min(limit, total_chunks))
+        
+        logger.info(f"Dumped {len(chunks)} chunks from knowledge base")
+        return chunks
+
     def get_stats(self) -> Dict[str, Any]:
         """Get system statistics.
         

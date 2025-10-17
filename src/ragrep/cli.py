@@ -35,6 +35,11 @@ def main():
     query_parser.add_argument('--n-results', type=int, default=5, help='Number of results to retrieve')
     query_parser.add_argument('--model', default='microsoft/DialoGPT-medium', help='Hugging Face model name')
     
+    # Dump command
+    dump_parser = subparsers.add_parser('dump', help='Dump knowledge base contents without LLM processing')
+    dump_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
+    dump_parser.add_argument('--limit', type=int, default=10, help='Maximum number of chunks to show')
+    
     # Stats command
     stats_parser = subparsers.add_parser('stats', help='Show system statistics')
     stats_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
@@ -64,6 +69,18 @@ def main():
                 print(f"{i}. {source['metadata'].get('filename', 'Unknown')}")
                 print(f"   {source['text']}")
                 print()
+        
+        elif args.command == 'dump':
+            rag = RAGSystem(vector_db_path=args.db_path)
+            chunks = rag.dump_chunks(limit=args.limit)
+            print(f"Dumping {len(chunks)} chunks from knowledge base:")
+            print("=" * 60)
+            for i, chunk in enumerate(chunks, 1):
+                print(f"\n--- Chunk {i} ---")
+                print(f"Source: {chunk['metadata'].get('source', 'Unknown')}")
+                print(f"Text: {chunk['text'][:200]}{'...' if len(chunk['text']) > 200 else ''}")
+                if 'distance' in chunk and chunk['distance'] is not None:
+                    print(f"Similarity: {chunk['distance']:.4f}")
                 
         elif args.command == 'stats':
             rag = RAGSystem(vector_db_path=args.db_path)
