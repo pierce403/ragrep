@@ -26,14 +26,19 @@ class Spinner:
         spinner_char = self.spinner_chars[self.current_char % len(self.spinner_chars)]
         self.current_char += 1
         
-        # Clear the line and print the spinner
-        sys.stdout.write(f"\r{spinner_char} {self.message} {file_num}/{total_files}: {file_name} ({elapsed:.1f}s)")
+        # Clear the entire line and print the spinner
+        line = f"{spinner_char} {self.message} {file_num}/{total_files}: {file_name} ({elapsed:.1f}s)"
+        # Pad with spaces to clear any remaining characters
+        line = line.ljust(80)
+        sys.stdout.write(f"\r{line}")
         sys.stdout.flush()
         
     def finish(self, file_name, file_num, total_files, chunks_created):
         """Finish the spinner with final status."""
         elapsed = time.time() - self.start_time
-        sys.stdout.write(f"\r✅ Processed {file_num}/{total_files}: {file_name} ({chunks_created} chunks, {elapsed:.1f}s)\n")
+        line = f"✅ Processed {file_num}/{total_files}: {file_name} ({chunks_created} chunks, {elapsed:.1f}s)"
+        # Clear the line first, then print the result
+        sys.stdout.write(f"\r{' ' * 80}\r{line}\n")
         sys.stdout.flush()
 
 
@@ -240,18 +245,19 @@ class DocumentProcessor:
         spinner = Spinner("Processing files")
         
         for i, file_path in enumerate(files_to_process, 1):
-            logger.info(f"Processing file {i}/{len(files_to_process)}: {file_path.name}")
-            
-            # Show spinner for this file
+            # Show spinner for this file (before any logging)
             spinner.update(file_path.name, i, len(files_to_process))
             
             try:
                 chunks = self.process_document(str(file_path))
                 all_chunks.extend(chunks)
                 spinner.finish(file_path.name, i, len(files_to_process), len(chunks))
+                # Log after spinner is done
+                logger.info(f"Processing file {i}/{len(files_to_process)}: {file_path.name}")
             except Exception as e:
                 # Clear spinner line and show error
-                sys.stdout.write(f"\r❌ Failed {i}/{len(files_to_process)}: {file_path.name} - {e}\n")
+                error_line = f"❌ Failed {i}/{len(files_to_process)}: {file_path.name} - {e}"
+                sys.stdout.write(f"\r{' ' * 80}\r{error_line}\n")
                 sys.stdout.flush()
                 logger.warning(f"Failed to process {file_path}: {e}")
         
