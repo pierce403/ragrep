@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class VectorStore:
     """Handles vector storage and similarity search."""
     
-    def __init__(self, persist_directory: str = "./data/vector_db"):
+    def __init__(self, persist_directory: str = "./.ragrep.db"):
         """Initialize vector store.
         
         Args:

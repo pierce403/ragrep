@@ -55,7 +55,10 @@ cp env.example .env
 ### Command Line Interface
 
 ```bash
-# Index documents into knowledge base
+# Index documents in current directory
+ragrep index
+
+# Index documents in specific directory
 ragrep index ./documents
 
 # Query the knowledge base

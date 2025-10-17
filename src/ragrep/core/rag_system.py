@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class RAGSystem:
     """Main RAG system that combines retrieval and generation."""
     
-    def __init__(self, 
-                 vector_db_path: str = "./data/vector_db",
+    def __init__(self,
+                 vector_db_path: str = "./.ragrep.db",
                  chunk_size: int = 1000,
                  chunk_overlap: int = 200,
                  generation_model: str = "microsoft/DialoGPT-medium"):

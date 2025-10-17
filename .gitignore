@@ -58,6 +58,7 @@ data/
 *.sqlite3
 vector_db/
 test_vector_db/
+.ragrep.db
 
 # Logs
 *.log

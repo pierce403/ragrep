@@ -4,6 +4,7 @@ import os
 from typing import List, Dict, Any
 from pathlib import Path
 import logging
+import fnmatch
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,78 @@ class DocumentProcessor:
         """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.ignore_patterns = self._load_gitignore_patterns()
+        
+    def _load_gitignore_patterns(self) -> List[str]:
+        """Load .gitignore patterns from the current directory and parent directories."""
+        patterns = []
+        current_dir = Path.cwd()
+        
+        # Walk up the directory tree to find .gitignore files
+        while current_dir != current_dir.parent:
+            gitignore_path = current_dir / '.gitignore'
+            if gitignore_path.exists():
+                try:
+                    with open(gitignore_path, 'r', encoding='utf-8') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith('#'):
+                                patterns.append(line)
+                except Exception as e:
+                    logger.warning(f"Error reading .gitignore at {gitignore_path}: {e}")
+            current_dir = current_dir.parent
+            
+        # Add some common patterns if no .gitignore found
+        if not patterns:
+            patterns = [
+                '__pycache__/',
+                '*.pyc',
+                '*.pyo',
+                '*.pyd',
+                '.Python',
+                'venv/',
+                'env/',
+                '.venv/',
+                '.env/',
+                'node_modules/',
+                '.git/',
+                '.DS_Store',
+                '*.log',
+                '.ragrep.db',
+                'data/',
+                '*.db',
+                '*.sqlite',
+                '*.sqlite3',
+                'vector_db/',
+                'test_vector_db/'
+            ]
+            
+        logger.info(f"Loaded {len(patterns)} ignore patterns")
+        return patterns
+    
+    def _should_ignore(self, file_path: Path) -> bool:
+        """Check if a file should be ignored based on .gitignore patterns."""
+        file_str = str(file_path)
+        relative_path = file_path.relative_to(Path.cwd()) if file_path.is_absolute() else file_path
+        
+        for pattern in self.ignore_patterns:
+            # Handle directory patterns (ending with /)
+            if pattern.endswith('/'):
+                # Check if any part of the path matches the directory pattern
+                if fnmatch.fnmatch(str(relative_path), pattern) or fnmatch.fnmatch(str(relative_path) + '/', pattern):
+                    return True
+                # Check if the pattern matches any parent directory
+                for part in relative_path.parts:
+                    if fnmatch.fnmatch(part + '/', pattern):
+                        return True
+            else:
+                # Handle file patterns - check both full path and just filename
+                if (fnmatch.fnmatch(str(relative_path), pattern) or 
+                    fnmatch.fnmatch(file_path.name, pattern) or
+                    fnmatch.fnmatch(str(relative_path), '*' + pattern)):
+                    return True
+                    
+        return False
         
     def load_document(self, file_path: str) -> str:
         """Load text content from a file.
@@ -114,6 +187,11 @@ class DocumentProcessor:
         
         for file_path in directory.rglob('*'):
             if file_path.is_file() and file_path.suffix.lower() in text_extensions:
+                # Check if file should be ignored
+                if self._should_ignore(file_path):
+                    logger.info(f"Ignoring file: {file_path}")
+                    continue
+                    
                 try:
                     chunks = self.process_document(str(file_path))
                     all_chunks.extend(chunks)

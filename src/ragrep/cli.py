@@ -25,19 +25,19 @@ def main():
     
     # Index documents command
     index_parser = subparsers.add_parser('index', help='Index documents into knowledge base')
-    index_parser.add_argument('path', help='Path to document or directory')
-    index_parser.add_argument('--db-path', default='./data/vector_db', help='Vector database path')
+    index_parser.add_argument('path', nargs='?', default='.', help='Path to document or directory (default: current directory)')
+    index_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     
     # Query command
     query_parser = subparsers.add_parser('query', help='Query the knowledge base')
     query_parser.add_argument('question', help='Question to ask')
-    query_parser.add_argument('--db-path', default='./data/vector_db', help='Vector database path')
+    query_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     query_parser.add_argument('--n-results', type=int, default=5, help='Number of results to retrieve')
     query_parser.add_argument('--model', default='microsoft/DialoGPT-medium', help='Hugging Face model name')
     
     # Stats command
     stats_parser = subparsers.add_parser('stats', help='Show system statistics')
-    stats_parser.add_argument('--db-path', default='./data/vector_db', help='Vector database path')
+    stats_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     
     args = parser.parse_args()
     
