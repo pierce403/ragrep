@@ -59,26 +59,42 @@ def main():
     
     try:
         if args.command == 'index':
-            print(f"🚀 Starting indexing process...")
+            import time
+            start_time = time.time()
+            
+            print(f"🚀 Starting indexing process... [{time.strftime('%H:%M:%S')}]")
             print(f"📁 Target path: {args.path}")
             print(f"🗄️  Database: {args.db_path}")
             print("=" * 60)
             print("⚙️  Initializing indexing components...")
             print("   📄 Setting up document processor...")
-            print("   🗄️  Setting up vector database...")
             
+            doc_start = time.time()
             # Only load what we need for indexing - no language model!
             from .core.document_processor import DocumentProcessor
             from .retrieval.vector_store import VectorStore
+            print(f"   ✅ DocumentProcessor imported [{time.time() - doc_start:.2f}s]")
             
+            print("   🗄️  Setting up vector database...")
+            vector_start = time.time()
             document_processor = DocumentProcessor()
+            print(f"   ✅ DocumentProcessor created [{time.time() - vector_start:.2f}s]")
+            
             vector_store = VectorStore(args.db_path)
-            print("✅ Indexing components ready!")
+            print(f"✅ Indexing components ready! [{time.time() - start_time:.2f}s total]")
             print("=" * 60)
             
             # Process documents
+            process_start = time.time()
+            print(f"📄 Starting document processing... [{time.strftime('%H:%M:%S')}]")
             chunks = document_processor.process_directory(args.path)
+            print(f"✅ Document processing complete [{time.time() - process_start:.2f}s]")
+            
+            # Add to vector store
+            vector_add_start = time.time()
+            print(f"💾 Starting vector store operations... [{time.strftime('%H:%M:%S')}]")
             vector_store.add_documents(chunks)
+            print(f"✅ Vector store operations complete [{time.time() - vector_add_start:.2f}s]")
             
             print("=" * 60)
             print(f"✅ Successfully indexed documents from {args.path}")

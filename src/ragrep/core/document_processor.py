@@ -19,9 +19,17 @@ class DocumentProcessor:
             chunk_size: Maximum size of each text chunk
             chunk_overlap: Number of characters to overlap between chunks
         """
+        import time
+        start_time = time.time()
+        
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        
+        print(f"      🔄 Loading .gitignore patterns... [{time.strftime('%H:%M:%S')}]")
+        gitignore_start = time.time()
         self.ignore_patterns = self._load_gitignore_patterns()
+        print(f"      ✅ .gitignore patterns loaded [{time.time() - gitignore_start:.2f}s]")
+        print(f"      ✅ DocumentProcessor ready [{time.time() - start_time:.2f}s total]")
         
     def _load_gitignore_patterns(self) -> List[str]:
         """Load .gitignore patterns from the current directory and parent directories."""
