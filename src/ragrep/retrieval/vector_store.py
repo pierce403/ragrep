@@ -45,6 +45,7 @@ class VectorStore:
             logger.warning("No chunks to add")
             return
             
+        print(f"💾 Adding {len(chunks)} chunks to vector database...")
         logger.info(f"Adding {len(chunks)} chunks to vector database...")
         
         texts = [chunk['text'] for chunk in chunks]
@@ -57,6 +58,7 @@ class VectorStore:
             ids=ids
         )
         
+        print(f"✅ Successfully added {len(chunks)} chunks to vector store")
         logger.info(f"Successfully added {len(chunks)} chunks to vector store")
     
     def search(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:

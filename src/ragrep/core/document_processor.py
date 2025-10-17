@@ -193,15 +193,20 @@ class DocumentProcessor:
                     continue
                 files_to_process.append(file_path)
         
+        print(f"📄 Found {len(files_to_process)} files to process")
         logger.info(f"Found {len(files_to_process)} files to process")
         
         for i, file_path in enumerate(files_to_process, 1):
+            print(f"📝 Processing file {i}/{len(files_to_process)}: {file_path.name}")
             logger.info(f"Processing file {i}/{len(files_to_process)}: {file_path.name}")
             try:
                 chunks = self.process_document(str(file_path))
                 all_chunks.extend(chunks)
+                print(f"   ✅ Created {len(chunks)} chunks")
             except Exception as e:
+                print(f"   ❌ Failed to process: {e}")
                 logger.warning(f"Failed to process {file_path}: {e}")
                     
+        print(f"📊 Processed {len(all_chunks)} total chunks from {len(files_to_process)} files")
         logger.info(f"Processed {len(all_chunks)} chunks from {directory_path}")
         return all_chunks

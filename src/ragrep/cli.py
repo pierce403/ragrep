@@ -10,10 +10,11 @@ from pathlib import Path
 from .core.rag_system import RAGSystem
 
 
-def setup_logging():
+def setup_logging(verbose=False):
     """Set up logging configuration."""
+    level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
-        level=logging.INFO,
+        level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
@@ -27,6 +28,7 @@ def main():
     index_parser = subparsers.add_parser('index', help='Index documents into knowledge base')
     index_parser.add_argument('path', nargs='?', default='.', help='Path to document or directory (default: current directory)')
     index_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
+    index_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
     
     # Query command
     query_parser = subparsers.add_parser('query', help='Query the knowledge base')
@@ -51,13 +53,23 @@ def main():
         parser.print_help()
         return
     
-    setup_logging()
+    # Set up logging with verbose mode for index command
+    verbose = getattr(args, 'verbose', False)
+    setup_logging(verbose=verbose)
     
     try:
         if args.command == 'index':
+            print(f"🚀 Starting indexing process...")
+            print(f"📁 Target path: {args.path}")
+            print(f"🗄️  Database: {args.db_path}")
+            print("=" * 60)
+            
             rag = RAGSystem(vector_db_path=args.db_path)
             rag.add_documents(args.path)
-            print(f"Successfully indexed documents from {args.path}")
+            
+            print("=" * 60)
+            print(f"✅ Successfully indexed documents from {args.path}")
+            print(f"📊 Use 'ragrep stats' to see database statistics")
             
         elif args.command == 'query':
             rag = RAGSystem(vector_db_path=args.db_path, generation_model=args.model)
