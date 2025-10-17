@@ -23,10 +23,14 @@ class TextGenerator:
         try:
             # Load model and tokenizer
             logger.info(f"Downloading and loading model: {model_name}")
+            print("      📥 Downloading tokenizer...")
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            print("      ✅ Tokenizer loaded")
             logger.info("Tokenizer loaded successfully")
             
+            print("      📥 Downloading model weights...")
             self.model = AutoModelForCausalLM.from_pretrained(model_name)
+            print("      ✅ Model loaded")
             logger.info("Model loaded successfully")
             
             # Add padding token if it doesn't exist
@@ -34,6 +38,7 @@ class TextGenerator:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
             
             # Create text generation pipeline
+            print("      ⚙️  Setting up generation pipeline...")
             logger.info("Setting up text generation pipeline...")
             self.generator = pipeline(
                 "text-generation",

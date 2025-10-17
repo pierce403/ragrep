@@ -35,7 +35,9 @@ class RAGSystem:
         self.vector_store = VectorStore(vector_db_path)
         
         logger.info("Loading language model (this may take a moment on first run)...")
+        print("   🔄 Downloading and loading model...")
         self.text_generator = TextGenerator(generation_model)
+        print("   ✅ Language model loaded successfully!")
         
         logger.info("RAG system initialized successfully")
     

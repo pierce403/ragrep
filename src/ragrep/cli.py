@@ -63,9 +63,22 @@ def main():
             print(f"📁 Target path: {args.path}")
             print(f"🗄️  Database: {args.db_path}")
             print("=" * 60)
+            print("⚙️  Initializing indexing components...")
+            print("   📄 Setting up document processor...")
+            print("   🗄️  Setting up vector database...")
             
-            rag = RAGSystem(vector_db_path=args.db_path)
-            rag.add_documents(args.path)
+            # Only load what we need for indexing - no language model!
+            from .core.document_processor import DocumentProcessor
+            from .retrieval.vector_store import VectorStore
+            
+            document_processor = DocumentProcessor()
+            vector_store = VectorStore(args.db_path)
+            print("✅ Indexing components ready!")
+            print("=" * 60)
+            
+            # Process documents
+            chunks = document_processor.process_directory(args.path)
+            vector_store.add_documents(chunks)
             
             print("=" * 60)
             print(f"✅ Successfully indexed documents from {args.path}")
