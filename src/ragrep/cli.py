@@ -36,9 +36,10 @@ def main():
     query_parser.add_argument('--model', default='microsoft/DialoGPT-medium', help='Hugging Face model name')
     
     # Dump command
-    dump_parser = subparsers.add_parser('dump', help='Dump knowledge base contents without LLM processing')
+    dump_parser = subparsers.add_parser('dump', help='Dump knowledge base contents matching query (no LLM processing)')
+    dump_parser.add_argument('query', help='Query to search for relevant chunks')
     dump_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
-    dump_parser.add_argument('--limit', type=int, default=10, help='Maximum number of chunks to show')
+    dump_parser.add_argument('--limit', type=int, default=20, help='Maximum number of chunks to show (default: 20)')
     
     # Stats command
     stats_parser = subparsers.add_parser('stats', help='Show system statistics')
@@ -72,15 +73,20 @@ def main():
         
         elif args.command == 'dump':
             rag = RAGSystem(vector_db_path=args.db_path)
-            chunks = rag.dump_chunks(limit=args.limit)
-            print(f"Dumping {len(chunks)} chunks from knowledge base:")
-            print("=" * 60)
+            chunks = rag.dump_chunks(args.query, limit=args.limit)
+            
+            print(f"# Knowledge Base Dump for Query: '{args.query}'")
+            print(f"# Found {len(chunks)} relevant chunks")
+            print("=" * 80)
+            
             for i, chunk in enumerate(chunks, 1):
-                print(f"\n--- Chunk {i} ---")
-                print(f"Source: {chunk['metadata'].get('source', 'Unknown')}")
-                print(f"Text: {chunk['text'][:200]}{'...' if len(chunk['text']) > 200 else ''}")
-                if 'distance' in chunk and chunk['distance'] is not None:
-                    print(f"Similarity: {chunk['distance']:.4f}")
+                source = chunk['metadata'].get('source', 'Unknown')
+                similarity = chunk.get('distance', 0)
+                print(f"\n## Chunk {i} (Similarity: {similarity:.3f})")
+                print(f"**Source:** `{source}`")
+                print(f"**Content:**")
+                print(chunk['text'])
+                print("-" * 40)
                 
         elif args.command == 'stats':
             rag = RAGSystem(vector_db_path=args.db_path)

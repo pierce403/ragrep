@@ -91,14 +91,15 @@ class RAGSystem:
         logger.info(f"Processed query: {question}")
         return result
     
-    def dump_chunks(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Dump chunks from the knowledge base without LLM processing.
+    def dump_chunks(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
+        """Dump chunks from the knowledge base matching a query (no LLM processing).
         
         Args:
+            query: Search query to find relevant chunks
             limit: Maximum number of chunks to return
             
         Returns:
-            List of document chunks with metadata
+            List of document chunks with metadata, sorted by relevance
         """
         # Get all chunks from the vector store
         collection_info = self.vector_store.get_collection_info()
@@ -108,10 +109,15 @@ class RAGSystem:
             logger.info("No chunks found in knowledge base")
             return []
         
-        # Get random chunks from the vector store
-        chunks = self.vector_store.get_random_chunks(min(limit, total_chunks))
+        # Use semantic search to find relevant chunks
+        # Increase search results to get better coverage, then limit
+        search_limit = min(limit * 2, total_chunks)  # Get 2x to have better selection
+        chunks = self.vector_store.search(query, n_results=search_limit)
         
-        logger.info(f"Dumped {len(chunks)} chunks from knowledge base")
+        # Limit to requested number
+        chunks = chunks[:limit]
+        
+        logger.info(f"Dumped {len(chunks)} chunks matching query '{query}' from knowledge base")
         return chunks
 
     def get_stats(self) -> Dict[str, Any]:
