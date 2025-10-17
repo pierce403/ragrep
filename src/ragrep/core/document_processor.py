@@ -1,12 +1,40 @@
 """Document processing and chunking functionality."""
 
 import os
+import sys
+import time
 from typing import List, Dict, Any
 from pathlib import Path
 import logging
 import fnmatch
 
 logger = logging.getLogger(__name__)
+
+
+class Spinner:
+    """Simple spinner for showing progress."""
+    
+    def __init__(self, message="Processing"):
+        self.message = message
+        self.spinner_chars = "|/-\\"
+        self.current_char = 0
+        self.start_time = time.time()
+        
+    def update(self, file_name, file_num, total_files):
+        """Update the spinner with current file info."""
+        elapsed = time.time() - self.start_time
+        spinner_char = self.spinner_chars[self.current_char % len(self.spinner_chars)]
+        self.current_char += 1
+        
+        # Clear the line and print the spinner
+        sys.stdout.write(f"\r{spinner_char} {self.message} {file_num}/{total_files}: {file_name} ({elapsed:.1f}s)")
+        sys.stdout.flush()
+        
+    def finish(self, file_name, file_num, total_files, chunks_created):
+        """Finish the spinner with final status."""
+        elapsed = time.time() - self.start_time
+        sys.stdout.write(f"\r✅ Processed {file_num}/{total_files}: {file_name} ({chunks_created} chunks, {elapsed:.1f}s)\n")
+        sys.stdout.flush()
 
 
 class DocumentProcessor:
@@ -208,18 +236,23 @@ class DocumentProcessor:
             print(f"📄 Found {len(files_to_process)} files to process")
         logger.info(f"Found {len(files_to_process)} files to process")
         
+        # Initialize spinner for file processing
+        spinner = Spinner("Processing files")
+        
         for i, file_path in enumerate(files_to_process, 1):
-            if logger.isEnabledFor(logging.DEBUG):
-                print(f"📝 Processing file {i}/{len(files_to_process)}: {file_path.name}")
             logger.info(f"Processing file {i}/{len(files_to_process)}: {file_path.name}")
+            
+            # Show spinner for this file
+            spinner.update(file_path.name, i, len(files_to_process))
+            
             try:
                 chunks = self.process_document(str(file_path))
                 all_chunks.extend(chunks)
-                if logger.isEnabledFor(logging.DEBUG):
-                    print(f"   ✅ Created {len(chunks)} chunks")
+                spinner.finish(file_path.name, i, len(files_to_process), len(chunks))
             except Exception as e:
-                if logger.isEnabledFor(logging.DEBUG):
-                    print(f"   ❌ Failed to process: {e}")
+                # Clear spinner line and show error
+                sys.stdout.write(f"\r❌ Failed {i}/{len(files_to_process)}: {file_path.name} - {e}\n")
+                sys.stdout.flush()
                 logger.warning(f"Failed to process {file_path}: {e}")
         
         if logger.isEnabledFor(logging.DEBUG):
