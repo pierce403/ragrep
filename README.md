@@ -56,9 +56,6 @@ ragrep index ./src
 # Search for semantically related content
 ragrep dump "authentication logic" --limit 10
 
-# Get AI-generated answers about the codebase
-ragrep query "How does user authentication work?"
-
 # Show indexing statistics
 ragrep stats
 ```
@@ -112,19 +109,6 @@ ragrep dump "API endpoints" -v
 ...
 ```
 
-#### `ragrep query <question> [options]`
-Ask questions about the codebase and get AI-generated answers.
-
-```bash
-# Basic question
-ragrep query "How does the authentication system work?"
-
-# Specify number of context chunks
-ragrep query "What are the main API endpoints?" --n-results 10
-
-# Use different AI model
-ragrep query "Explain the database schema" --model microsoft/DialoGPT-medium
-```
 
 #### `ragrep stats [options]`
 Show statistics about the indexed knowledge base.
@@ -165,14 +149,14 @@ ragrep dump "exception handling" --limit 10
 
 ### Documentation Generation
 ```bash
-# Get overview of a module
-ragrep query "What does the authentication module do?"
-
 # Understand API structure
 ragrep dump "API routes" --limit 15
 
 # Find configuration options
 ragrep dump "configuration settings" --limit 8
+
+# Explore module organization
+ragrep dump "module structure" --limit 10
 ```
 
 ### Debugging Support
@@ -180,11 +164,11 @@ ragrep dump "configuration settings" --limit 8
 # Find error-related code
 ragrep dump "error logging" --limit 5
 
-# Understand data flow
-ragrep query "How does data flow from API to database?"
-
 # Find test cases
 ragrep dump "unit tests" --limit 10
+
+# Explore data flow patterns
+ragrep dump "data flow" --limit 8
 ```
 
 ## Configuration
@@ -227,11 +211,11 @@ ragrep dump "user authentication system" --limit 5
 
 ### Understanding Database Layer
 ```bash
-# Get AI explanation
-ragrep query "How is the database layer structured?"
-
 # Find related code
 ragrep dump "database models and schemas" --limit 8
+
+# Explore database connections
+ragrep dump "database connection" --limit 5
 ```
 
 ### Exploring API Endpoints
@@ -239,8 +223,8 @@ ragrep dump "database models and schemas" --limit 8
 # Find all API-related code
 ragrep dump "REST API endpoints" --limit 10
 
-# Understand API structure
-ragrep query "What are the main API endpoints and their purposes?"
+# Explore API structure
+ragrep dump "API structure" --limit 8
 ```
 
 ## Development
