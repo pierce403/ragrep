@@ -12,6 +12,7 @@ RAGRep is designed to help users build sophisticated RAG applications that can s
 - **Document Processing**: Automatic chunking and preprocessing of various document formats
 - **Vector Search**: Semantic search using local embedding models
 - **AI Generation**: Context-aware text generation using local language models
+- **Knowledge Base Inspection**: Dump command to view indexed content without LLM processing
 - **Flexible Architecture**: Modular design allowing customization of retrieval and generation components
 - **Multiple Formats**: Support for TXT, MD, PY, JS, HTML, CSS and other text formats
 - **CLI Interface**: Command-line tool for easy usage
@@ -63,6 +64,9 @@ ragrep index ./documents
 
 # Query the knowledge base
 ragrep query "What is machine learning?"
+
+# Dump knowledge base contents (no LLM processing)
+ragrep dump --limit 5
 
 # Show system statistics
 ragrep stats
