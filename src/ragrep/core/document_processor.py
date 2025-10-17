@@ -150,7 +150,6 @@ class DocumentProcessor:
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 content = file.read()
-            logger.info(f"Loaded document: {file_path}")
             return content
         except Exception as e:
             logger.error(f"Error loading document {file_path}: {e}")
@@ -195,7 +194,6 @@ class DocumentProcessor:
             if start >= len(text):
                 break
                 
-        logger.info(f"Created {len(chunks)} chunks from text")
         return chunks
     
     def process_document(self, file_path: str) -> List[Dict[str, Any]]:
@@ -245,7 +243,7 @@ class DocumentProcessor:
         spinner = Spinner("Processing files")
         
         for i, file_path in enumerate(files_to_process, 1):
-            # Show spinner for this file (before any logging)
+            # Show spinner for this file
             spinner.update(file_path.name, i, len(files_to_process))
             
             try:
@@ -254,8 +252,6 @@ class DocumentProcessor:
                 # Just clear the spinner line and move to next file
                 sys.stdout.write(f"\r{' ' * 80}\r")
                 sys.stdout.flush()
-                # Log after spinner is cleared
-                logger.info(f"Processing file {i}/{len(files_to_process)}: {file_path.name}")
             except Exception as e:
                 # Clear spinner line and show error
                 error_line = f"❌ Failed {i}/{len(files_to_process)}: {file_path.name} - {e}"
