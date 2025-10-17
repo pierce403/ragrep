@@ -12,7 +12,7 @@ RAGRep is designed to help users build sophisticated RAG applications that can s
 - **Document Processing**: Automatic chunking and preprocessing of various document formats
 - **Vector Search**: Semantic search using local embedding models
 - **AI Generation**: Context-aware text generation using local language models
-- **Knowledge Base Inspection**: Dump command to view indexed content without LLM processing
+- **Knowledge Base Inspection**: Semantic search dump command for LLM-ready context extraction
 - **Flexible Architecture**: Modular design allowing customization of retrieval and generation components
 - **Multiple Formats**: Support for TXT, MD, PY, JS, HTML, CSS and other text formats
 - **CLI Interface**: Command-line tool for easy usage
@@ -65,11 +65,31 @@ ragrep index ./documents
 # Query the knowledge base
 ragrep query "What is machine learning?"
 
-# Dump knowledge base contents (no LLM processing)
-ragrep dump --limit 5
+# Dump knowledge base contents matching query (no LLM processing)
+ragrep dump "machine learning" --limit 10
 
 # Show system statistics
 ragrep stats
+```
+
+### Knowledge Base Dump
+
+The `dump` command provides semantic search without LLM processing, perfect for feeding context directly into other LLMs:
+
+```bash
+# Search for relevant chunks
+ragrep dump "vector database" --limit 5
+
+# Output is structured for LLM consumption:
+# # Knowledge Base Dump for Query: 'vector database'
+# # Found 5 relevant chunks
+# ================================================================================
+# 
+# ## Chunk 1 (Similarity: 1.073)
+# **Source:** `src/ragrep/retrieval/vector_store.py`
+# **Content:**
+# """Vector storage and retrieval functionality."""
+# ...
 ```
 
 ### Python API
