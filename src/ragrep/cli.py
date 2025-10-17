@@ -7,7 +7,8 @@ import argparse
 import logging
 from pathlib import Path
 
-from .core.rag_system import RAGSystem
+# Lazy import to avoid heavy dependencies during CLI startup
+# from .core.rag_system import RAGSystem
 
 
 def setup_logging(verbose=False):
@@ -21,6 +22,9 @@ def setup_logging(verbose=False):
 
 def main():
     """Main CLI entry point."""
+    import time
+    print(f"🚀 RAGRep CLI starting... [{time.strftime('%H:%M:%S')}]")
+    
     parser = argparse.ArgumentParser(description="RAGRep - Retrieval-Augmented Generation Tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
@@ -48,14 +52,17 @@ def main():
     stats_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     
     args = parser.parse_args()
-    
+    print(f"📋 Arguments parsed... [{time.strftime('%H:%M:%S')}]")
+
     if not args.command:
         parser.print_help()
         return
-    
+
     # Set up logging with verbose mode for index command
     verbose = getattr(args, 'verbose', False)
+    print(f"⚙️  Setting up logging... [{time.strftime('%H:%M:%S')}]")
     setup_logging(verbose=verbose)
+    print(f"✅ Logging ready... [{time.strftime('%H:%M:%S')}]")
     
     try:
         if args.command == 'index':
@@ -101,6 +108,7 @@ def main():
             print(f"📊 Use 'ragrep stats' to see database statistics")
             
         elif args.command == 'query':
+            from .core.rag_system import RAGSystem
             rag = RAGSystem(vector_db_path=args.db_path, generation_model=args.model)
             result = rag.query(args.question, n_results=args.n_results)
             
