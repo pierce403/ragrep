@@ -251,8 +251,10 @@ class DocumentProcessor:
             try:
                 chunks = self.process_document(str(file_path))
                 all_chunks.extend(chunks)
-                spinner.finish(file_path.name, i, len(files_to_process), len(chunks))
-                # Log after spinner is done
+                # Just clear the spinner line and move to next file
+                sys.stdout.write(f"\r{' ' * 80}\r")
+                sys.stdout.flush()
+                # Log after spinner is cleared
                 logger.info(f"Processing file {i}/{len(files_to_process)}: {file_path.name}")
             except Exception as e:
                 # Clear spinner line and show error
