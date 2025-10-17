@@ -22,17 +22,22 @@ class VectorStore:
         os.makedirs(persist_directory, exist_ok=True)
         
         # Initialize ChromaDB
+        print("   🔄 Initializing ChromaDB vector database...")
+        logger.info("Initializing ChromaDB vector database...")
         self.client = chromadb.PersistentClient(
             path=persist_directory,
             settings=Settings(anonymized_telemetry=False)
         )
         
         # Get or create collection
+        print("   🔄 Setting up document collection...")
+        logger.info("Setting up document collection...")
         self.collection = self.client.get_or_create_collection(
             name="ragrep_documents",
             metadata={"description": "RAGRep document collection"}
         )
         
+        print("   ✅ ChromaDB ready!")
         logger.info(f"Initialized vector store at {persist_directory}")
     
     def add_documents(self, chunks: List[Dict[str, Any]]) -> None:
@@ -46,18 +51,21 @@ class VectorStore:
             return
             
         print(f"💾 Adding {len(chunks)} chunks to vector database...")
+        print("   🔄 ChromaDB is generating embeddings (this may take a moment)...")
         logger.info(f"Adding {len(chunks)} chunks to vector database...")
         
         texts = [chunk['text'] for chunk in chunks]
         metadatas = [chunk['metadata'] for chunk in chunks]
         ids = [f"chunk_{i}" for i in range(len(chunks))]
         
+        # This is where ChromaDB does the heavy lifting - generating embeddings
         self.collection.add(
             documents=texts,
             metadatas=metadatas,
             ids=ids
         )
         
+        print("   🔄 Building search index...")
         print(f"✅ Successfully added {len(chunks)} chunks to vector store")
         logger.info(f"Successfully added {len(chunks)} chunks to vector store")
     
@@ -71,6 +79,9 @@ class VectorStore:
         Returns:
             List of similar documents with metadata
         """
+        print(f"🔍 Searching vector database for: '{query}'...")
+        logger.info(f"Searching for: {query}")
+        
         results = self.collection.query(
             query_texts=[query],
             n_results=n_results
