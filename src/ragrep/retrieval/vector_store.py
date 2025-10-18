@@ -27,19 +27,35 @@ class VectorStore:
         if logger.isEnabledFor(logging.DEBUG):
             print("   🔄 Initializing ChromaDB vector database...")
         logger.info("Initializing ChromaDB vector database...")
-        self.client = chromadb.PersistentClient(
-            path=persist_directory,
-            settings=Settings(anonymized_telemetry=False)
-        )
+        
+        try:
+            self.client = chromadb.PersistentClient(
+                path=persist_directory,
+                settings=Settings(anonymized_telemetry=False)
+            )
+        except (TypeError, AttributeError) as e:
+            # Fallback for Python 3.8 compatibility issues with type hints
+            logger.warning(f"ChromaDB initialization failed with settings (Python 3.8 compatibility issue): {e}")
+            self.client = chromadb.PersistentClient(path=persist_directory)
+        except Exception as e:
+            # General fallback
+            logger.warning(f"ChromaDB initialization failed with settings, trying without: {e}")
+            self.client = chromadb.PersistentClient(path=persist_directory)
         
         # Get or create collection
         if logger.isEnabledFor(logging.DEBUG):
             print("   🔄 Setting up document collection...")
         logger.info("Setting up document collection...")
-        self.collection = self.client.get_or_create_collection(
-            name="ragrep_documents",
-            metadata={"description": "RAGrep document collection"}
-        )
+        
+        try:
+            self.collection = self.client.get_or_create_collection(
+                name="ragrep_documents",
+                metadata={"description": "RAGrep document collection"}
+            )
+        except Exception as e:
+            # Fallback for Python 3.8 compatibility issues
+            logger.warning(f"Collection creation failed with metadata, trying without: {e}")
+            self.collection = self.client.get_or_create_collection(name="ragrep_documents")
         
         if logger.isEnabledFor(logging.DEBUG):
             print("   ✅ ChromaDB ready!")
