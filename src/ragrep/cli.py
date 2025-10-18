@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Command-line interface for RAGRep."""
+"""Command-line interface for RAGrep."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def setup_logging(verbose=False):
 
 def main():
     """Main CLI entry point."""
-    parser = argparse.ArgumentParser(description="RAGRep - Retrieval-Augmented Generation Tool")
+    parser = argparse.ArgumentParser(description="RAGrep - Retrieval-Augmented Generation Tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Index documents command

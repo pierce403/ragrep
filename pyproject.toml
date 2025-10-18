@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "RAGRep Team", email = "ragrep@example.com"}
+    {name = "RAGrep Team", email = "ragrep@example.com"}
 ]
 keywords = ["ai", "semantic-search", "grep", "code-navigation", "rag", "vector-search"]
 classifiers = [

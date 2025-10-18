@@ -38,7 +38,7 @@ class VectorStore:
         logger.info("Setting up document collection...")
         self.collection = self.client.get_or_create_collection(
             name="ragrep_documents",
-            metadata={"description": "RAGRep document collection"}
+            metadata={"description": "RAGrep document collection"}
         )
         
         if logger.isEnabledFor(logging.DEBUG):

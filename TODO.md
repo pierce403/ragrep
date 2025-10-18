@@ -1,4 +1,4 @@
-# RAGRep Development TODO
+# RAGrep Development TODO
 
 ## Project Overview
 Building a Retrieval-Augmented Generation (RAG) tool that combines document retrieval with AI-powered text generation.

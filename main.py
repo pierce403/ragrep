@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Main entry point for RAGRep CLI."""
+"""Main entry point for RAGrep CLI."""
 
 import os
 import sys
@@ -23,7 +23,7 @@ def setup_logging():
 
 def main():
     """Main CLI entry point."""
-    parser = argparse.ArgumentParser(description="RAGRep - Retrieval-Augmented Generation Tool")
+    parser = argparse.ArgumentParser(description="RAGrep - Retrieval-Augmented Generation Tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Add documents command

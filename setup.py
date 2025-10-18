@@ -1,4 +1,4 @@
-"""Setup script for RAGRep."""
+"""Setup script for RAGrep."""
 
 from setuptools import setup, find_packages
 
@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="ragrep",
     version="0.1.0",
-    author="RAGRep Team",
+    author="RAGrep Team",
     description="AI Agent File Navigator - Semantic search tool similar to grep for AI agents",
     long_description=long_description,
     long_description_content_type="text/markdown",

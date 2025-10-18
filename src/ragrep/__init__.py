@@ -1,5 +1,5 @@
 """
-RAGRep - Retrieval-Augmented Generation Tool
+RAGrep - Retrieval-Augmented Generation Tool
 
 A powerful tool for implementing RAG systems that combine document retrieval 
 with AI-powered text generation.
@@ -8,7 +8,7 @@ with AI-powered text generation.
 from __future__ import annotations
 
 __version__ = "0.1.0"
-__author__ = "RAGRep Team"
+__author__ = "RAGrep Team"
 
 # Lazy imports to avoid heavy dependencies during CLI startup
 def __getattr__(name):

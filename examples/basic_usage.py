@@ -1,4 +1,4 @@
-"""Basic usage example for RAGRep."""
+"""Basic usage example for RAGrep."""
 
 import os
 import sys
