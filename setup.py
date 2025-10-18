@@ -12,7 +12,7 @@ setup(
     name="ragrep",
     version="0.1.0",
     author="RAGRep Team",
-    description="A powerful tool for implementing Retrieval-Augmented Generation (RAG) systems",
+    description="AI Agent File Navigator - Semantic search tool similar to grep for AI agents",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(where="src"),
