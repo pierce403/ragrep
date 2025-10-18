@@ -36,7 +36,7 @@ def test_basic_imports():
     print("\n" + "="*60)
     print("🔍 TESTING BASIC IMPORTS")
     print("="*60)
-    
+
     tests = [
         ("python3 -c 'from src.ragrep.core.document_processor import DocumentProcessor'", "DocumentProcessor import"),
         ("python3 -c 'from src.ragrep.retrieval.vector_store import VectorStore'", "VectorStore import"),
@@ -44,14 +44,42 @@ def test_basic_imports():
         ("python3 -c 'from src.ragrep.generation.text_generator import TextGenerator'", "TextGenerator import"),
         ("python3 -c 'from src.ragrep.cli import main'", "CLI import"),
     ]
-    
+
     passed = 0
     for cmd, desc in tests:
         if run_command(cmd, desc):
             passed += 1
-    
+
     print(f"\n📊 Import Tests: {passed}/{len(tests)} passed")
     return passed == len(tests)
+
+def test_syntax_validation():
+    """Test that all Python files have valid syntax."""
+    print("\n" + "="*60)
+    print("🔍 TESTING SYNTAX VALIDATION")
+    print("="*60)
+
+    # Find all Python files
+    import glob
+    python_files = glob.glob("src/**/*.py", recursive=True)
+
+    passed = 0
+    for py_file in python_files:
+        try:
+            with open(py_file, 'r') as f:
+                content = f.read()
+            compile(content, py_file, 'exec')
+            print(f"✅ {py_file} - Valid syntax")
+            passed += 1
+        except SyntaxError as e:
+            print(f"❌ {py_file} - Syntax error: {e}")
+            return False
+        except Exception as e:
+            print(f"❌ {py_file} - Error: {e}")
+            return False
+
+    print(f"\n📊 Syntax Tests: {passed}/{len(python_files)} passed")
+    return passed == len(python_files)
 
 def test_cli_help():
     """Test that CLI help works."""
@@ -188,7 +216,8 @@ def main():
     
     # Run all tests
     test_results = []
-    
+
+    test_results.append(("Syntax Validation", test_syntax_validation()))
     test_results.append(("Basic Imports", test_basic_imports()))
     test_results.append(("CLI Help", test_cli_help()))
     test_results.append(("Basic Functionality", test_basic_functionality()))

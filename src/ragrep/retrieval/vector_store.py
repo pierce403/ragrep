@@ -47,39 +47,46 @@ class VectorStore:
                 logger.warning(f"Failed to remove {persist_directory}, trying again...")
                 shutil.rmtree(persist_directory, ignore_errors=True)
         
+        # Try different initialization approaches for Python 3.8 compatibility
+        client = None
+
+        # Method 1: Try with settings (may fail in Python 3.8)
         try:
             self.client = chromadb.PersistentClient(
                 path=persist_directory,
                 settings=Settings(anonymized_telemetry=False)
             )
         except (TypeError, AttributeError) as e:
-            # Fallback for Python 3.8 compatibility issues with type hints
-            logger.warning(f"ChromaDB initialization failed with settings (Python 3.8 compatibility issue): {e}")
+            logger.warning(f"ChromaDB initialization with settings failed (Python 3.8 compatibility): {e}")
+            # Method 2: Try without settings
             try:
                 self.client = chromadb.PersistentClient(path=persist_directory)
             except Exception as e2:
-                logger.warning(f"Fallback initialization also failed: {e2}")
-                # Try with a different path
+                logger.warning(f"ChromaDB initialization without settings also failed: {e2}")
+                # Method 3: Try with alternative path
                 alt_path = persist_directory + "_alt"
                 logger.info(f"Trying alternative path: {alt_path}")
-                self.client = chromadb.PersistentClient(path=alt_path)
-        except Exception as e:
-            # General fallback
-            logger.warning(f"ChromaDB initialization failed with settings, trying without: {e}")
-            try:
-                self.client = chromadb.PersistentClient(path=persist_directory)
-            except Exception as e2:
-                logger.warning(f"Fallback initialization also failed: {e2}")
-                # Try with a different path
-                alt_path = persist_directory + "_alt"
-                logger.info(f"Trying alternative path: {alt_path}")
-                self.client = chromadb.PersistentClient(path=alt_path)
+                try:
+                    self.client = chromadb.PersistentClient(path=alt_path)
+                except Exception as e3:
+                    logger.error(f"All ChromaDB initialization methods failed: {e3}")
+                    # Method 4: Last resort - try with in-memory client
+                    try:
+                        logger.info("Trying in-memory ChromaDB client as last resort")
+                        self.client = chromadb.EphemeralClient()
+                        logger.warning("Using in-memory client - data will not persist between runs")
+                    except Exception as e4:
+                        logger.error(f"Even in-memory client failed: {e4}")
+                        raise RuntimeError(f"Unable to initialize ChromaDB client: {e4}")
+
+        if self.client is None:
+            raise RuntimeError("Failed to initialize ChromaDB client with any method")
         
         # Get or create collection
         if logger.isEnabledFor(logging.DEBUG):
             print("   🔄 Setting up document collection...")
         logger.info("Setting up document collection...")
-        
+
         try:
             self.collection = self.client.get_or_create_collection(
                 name="ragrep_documents",
@@ -88,11 +95,21 @@ class VectorStore:
         except Exception as e:
             # Fallback for Python 3.8 compatibility issues
             logger.warning(f"Collection creation failed with metadata, trying without: {e}")
-            self.collection = self.client.get_or_create_collection(name="ragrep_documents")
-        
+            try:
+                self.collection = self.client.get_or_create_collection(name="ragrep_documents")
+            except Exception as e2:
+                logger.error(f"Collection creation failed even without metadata: {e2}")
+                raise RuntimeError(f"Unable to create collection: {e2}")
+
+        # Log the initialization result
         if logger.isEnabledFor(logging.DEBUG):
             print("   ✅ ChromaDB ready!")
-        logger.info(f"Initialized vector store at {persist_directory}")
+
+        # Only log persistence path if it's a persistent client
+        if hasattr(self.client, 'persist_directory'):
+            logger.info(f"Initialized vector store at {self.persist_directory}")
+        else:
+            logger.info("Initialized in-memory vector store (data will not persist)")
     
     def add_documents(self, chunks: List[Dict[str, Any]]) -> None:
         """Add document chunks to the vector store.
