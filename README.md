@@ -1,4 +1,4 @@
-# RAGRep - AI Agent File Navigator
+# RAGrep - AI Agent File Navigator
 
 A command-line tool similar to `grep`, but designed for AI agents to index and navigate files/code using semantic search.
 
