@@ -16,12 +16,20 @@ class VectorStore:
     
     def __init__(self, persist_directory: str = "./.ragrep.db"):
         """Initialize vector store.
-        
+
         Args:
             persist_directory: Directory to persist the vector database
         """
         self.persist_directory = persist_directory
-        os.makedirs(persist_directory, exist_ok=True)
+
+        # Create unique database path for testing environments
+        if os.environ.get('GITHUB_ACTIONS') == 'true':
+            # In GitHub Actions, use a unique path to avoid conflicts
+            import uuid
+            unique_id = str(uuid.uuid4())[:8]
+            self.persist_directory = f"./.ragrep_test_{unique_id}.db"
+
+        os.makedirs(self.persist_directory, exist_ok=True)
         
         # Initialize ChromaDB
         if logger.isEnabledFor(logging.DEBUG):
@@ -32,7 +40,12 @@ class VectorStore:
         if os.path.exists(persist_directory):
             logger.info(f"Removing existing database at {persist_directory} to avoid schema conflicts")
             import shutil
-            shutil.rmtree(persist_directory)
+            # Force remove with ignore_errors to handle any locked files
+            shutil.rmtree(persist_directory, ignore_errors=True)
+            # Ensure directory is completely gone
+            if os.path.exists(persist_directory):
+                logger.warning(f"Failed to remove {persist_directory}, trying again...")
+                shutil.rmtree(persist_directory, ignore_errors=True)
         
         try:
             self.client = chromadb.PersistentClient(
@@ -42,11 +55,25 @@ class VectorStore:
         except (TypeError, AttributeError) as e:
             # Fallback for Python 3.8 compatibility issues with type hints
             logger.warning(f"ChromaDB initialization failed with settings (Python 3.8 compatibility issue): {e}")
-            self.client = chromadb.PersistentClient(path=persist_directory)
+            try:
+                self.client = chromadb.PersistentClient(path=persist_directory)
+            except Exception as e2:
+                logger.warning(f"Fallback initialization also failed: {e2}")
+                # Try with a different path
+                alt_path = persist_directory + "_alt"
+                logger.info(f"Trying alternative path: {alt_path}")
+                self.client = chromadb.PersistentClient(path=alt_path)
         except Exception as e:
             # General fallback
             logger.warning(f"ChromaDB initialization failed with settings, trying without: {e}")
-            self.client = chromadb.PersistentClient(path=persist_directory)
+            try:
+                self.client = chromadb.PersistentClient(path=persist_directory)
+            except Exception as e2:
+                logger.warning(f"Fallback initialization also failed: {e2}")
+                # Try with a different path
+                alt_path = persist_directory + "_alt"
+                logger.info(f"Trying alternative path: {alt_path}")
+                self.client = chromadb.PersistentClient(path=alt_path)
         
         # Get or create collection
         if logger.isEnabledFor(logging.DEBUG):

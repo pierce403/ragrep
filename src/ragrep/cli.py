@@ -27,11 +27,15 @@ def main():
     parser = argparse.ArgumentParser(description="RAGrep - Retrieval-Augmented Generation Tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
-    # Index documents command
-    index_parser = subparsers.add_parser('index', help='Index documents into knowledge base')
-    index_parser.add_argument('path', nargs='?', default='.', help='Path to document or directory (default: current directory)')
-    index_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
-    index_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
+           # Index documents command
+           index_parser = subparsers.add_parser('index', help='Index documents into knowledge base')
+           index_parser.add_argument('path', nargs='?', default='.', help='Path to document or directory (default: current directory)')
+           index_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
+           index_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
+
+           # Use unique database path in testing environments
+           if os.environ.get('GITHUB_ACTIONS') == 'true':
+               index_parser.set_defaults(db_path=f'./.ragrep_test_{os.getpid()}.db')
     
     # Dump command
     dump_parser = subparsers.add_parser('dump', help='Dump knowledge base contents matching query (no LLM processing)')
@@ -39,11 +43,19 @@ def main():
     dump_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     dump_parser.add_argument('--limit', type=int, default=20, help='Maximum number of chunks to show (default: 20)')
     dump_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
+
+    # Use unique database path in testing environments
+    if os.environ.get('GITHUB_ACTIONS') == 'true':
+        dump_parser.set_defaults(db_path=f'./.ragrep_test_{os.getpid()}.db')
     
     # Stats command
     stats_parser = subparsers.add_parser('stats', help='Show system statistics')
     stats_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
     stats_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
+
+    # Use unique database path in testing environments
+    if os.environ.get('GITHUB_ACTIONS') == 'true':
+        stats_parser.set_defaults(db_path=f'./.ragrep_test_{os.getpid()}.db')
     
     args = parser.parse_args()
 
