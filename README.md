@@ -4,7 +4,7 @@ A command-line tool similar to `grep`, but designed for AI agents to index and n
 
 ## Overview
 
-RAGRep is a specialized command-line tool that enables AI agents to efficiently search and understand codebases through semantic indexing. Unlike traditional `grep` which searches for exact text matches, RAGRep uses vector embeddings to find semantically related content, making it perfect for AI agents that need to understand context and meaning.
+RAGrep is a specialized command-line tool that enables AI agents to efficiently search and understand codebases through semantic indexing. Unlike traditional `grep` which searches for exact text matches, RAGRep uses vector embeddings to find semantically related content, making it perfect for AI agents that need to understand context and meaning.
 
 ## Features
 
