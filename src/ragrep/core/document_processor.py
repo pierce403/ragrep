@@ -1,9 +1,11 @@
 """Document processing and chunking functionality."""
 
+from __future__ import annotations
+
 import os
 import sys
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 import logging
 import fnmatch

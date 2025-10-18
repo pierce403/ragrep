@@ -1,5 +1,7 @@
 """Main RAG system that orchestrates retrieval and generation."""
 
+from __future__ import annotations
+
 import os
 from typing import List, Dict, Any, Optional
 from .document_processor import DocumentProcessor
