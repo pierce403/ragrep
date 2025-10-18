@@ -28,6 +28,12 @@ class VectorStore:
             print("   🔄 Initializing ChromaDB vector database...")
         logger.info("Initializing ChromaDB vector database...")
         
+        # Clean up any existing database to avoid schema conflicts
+        if os.path.exists(persist_directory):
+            logger.info(f"Removing existing database at {persist_directory} to avoid schema conflicts")
+            import shutil
+            shutil.rmtree(persist_directory)
+        
         try:
             self.client = chromadb.PersistentClient(
                 path=persist_directory,
