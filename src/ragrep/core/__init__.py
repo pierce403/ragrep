@@ -1,5 +1,7 @@
 """Core RAG functionality."""
 
+from __future__ import annotations
+
 # Lazy imports to avoid heavy dependencies during CLI startup
 def __getattr__(name):
     """Lazy import of modules to avoid heavy dependencies during CLI startup."""

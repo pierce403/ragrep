@@ -5,6 +5,8 @@ A powerful tool for implementing RAG systems that combine document retrieval
 with AI-powered text generation.
 """
 
+from __future__ import annotations
+
 __version__ = "0.1.0"
 __author__ = "RAGRep Team"
 
