@@ -8,6 +8,18 @@ with open("README.md", "r", encoding="utf-8") as fh:
 with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
+extras = {
+    "retrieval": [
+        "chromadb>=0.4.15",
+    ],
+    "generation": [
+        "transformers>=4.30.0",
+        "sentence-transformers>=2.2.0",
+        "torch>=2.0.0; python_version<'3.12'",
+    ],
+}
+extras["full"] = extras["retrieval"] + extras["generation"]
+
 setup(
     name="ragrep",
     version="0.1.0",
@@ -30,6 +42,7 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=requirements,
+    extras_require=extras,
     entry_points={
         "console_scripts": [
             "ragrep=ragrep.cli:main",
