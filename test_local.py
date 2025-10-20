@@ -159,7 +159,7 @@ def test_python_versions():
     print("🔍 TESTING PYTHON VERSIONS")
     print("="*60)
     
-    python_versions = ["python3", "python3.8", "python3.9", "python3.10", "python3.11", "python3.12"]
+    python_versions = ["python3", "python3.9", "python3.10", "python3.11", "python3.12"]
     available_versions = []
     
     for version in python_versions:

@@ -40,7 +40,7 @@ def test_chromadb_initialization():
             print("✅ Settings initialization successful")
         except Exception as e:
             print(f"❌ Settings initialization failed: {e}")
-            print("This is expected for Python 3.8 - will use fallback")
+            print("This was previously expected on older Python versions - will use fallback")
         
         # Test 3: Collection creation
         print("\nTest 3: Collection creation")

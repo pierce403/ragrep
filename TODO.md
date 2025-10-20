@@ -51,7 +51,7 @@ Building a Retrieval-Augmented Generation (RAG) tool that combines document retr
 - Research papers and resources stored in docs/ directory
 
 ## Dependencies
-- Python 3.8+
+- Python 3.9+
 - Local language model (downloaded automatically)
 - ChromaDB (local SQLite-based vector database)
 - Hugging Face Transformers

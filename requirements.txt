@@ -1,4 +1,5 @@
 # Core runtime dependencies are intentionally minimal to keep installation fast
-# and compatible with all supported Python versions. Optional integrations such
-# as ChromaDB or Hugging Face transformers can be installed via extras declared
-# in ``pyproject.toml`` (e.g. ``pip install ragrep[full]``).
+# and compatible with supported Python versions (3.9+). Optional integrations
+# such as ChromaDB (ragrep[retrieval]) or Hugging Face transformers
+# (ragrep[generation]) can be installed via extras declared in ``pyproject.toml``,
+# for example: ``pip install ragrep[full]``.

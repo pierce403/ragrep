@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test script to debug ChromaDB Python 3.8 compatibility issues."""
+"""Test script to debug ChromaDB compatibility issues."""
 
 from __future__ import annotations
 

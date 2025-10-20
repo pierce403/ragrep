@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAGrep &mdash; Retrieval-Augmented Code Search</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            padding: 3rem 1.5rem;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0 0 1rem;
+            font-size: 2.5rem;
+            letter-spacing: 0.04em;
+        }
+
+        header p {
+            margin: 0 auto;
+            max-width: 720px;
+        }
+
+        main {
+            padding: 2rem 1.5rem 4rem;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        section {
+            margin-bottom: 2.5rem;
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 12px;
+            padding: 1.75rem;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.6rem;
+        }
+
+        ul {
+            padding-left: 1.2rem;
+        }
+
+        code {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.95rem;
+        }
+
+        pre {
+            background: rgba(30, 41, 59, 0.85);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: #0b1220;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.95rem;
+        }
+
+        .cta-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.75rem;
+        }
+
+        .cta-button {
+            padding: 0.75rem 1.25rem;
+            border-radius: 999px;
+            background: #38bdf8;
+            color: #0f172a;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
+        }
+
+        @media (max-width: 640px) {
+            header h1 {
+                font-size: 2rem;
+            }
+
+            section {
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>RAGrep</h1>
+        <p>Semantic, retrieval-augmented search for codebases and knowledge repositories. RAGrep helps AI agents and developers index projects, run dense retrieval, and surface the right snippets without shipping data to external services.</p>
+        <div class="cta-links">
+            <a class="cta-button" href="https://github.com/pierce403/ragrep" target="_blank" rel="noopener">View on GitHub</a>
+            <a class="cta-button" href="https://github.com/pierce403/ragrep/blob/main/README.md" target="_blank" rel="noopener">Full Documentation</a>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Key Features</h2>
+            <ul>
+                <li><strong>Semantic Search:</strong> Vector-powered retrieval surfaces contextually relevant code and prose.</li>
+                <li><strong>Agent-Friendly CLI:</strong> Designed so automated agents can index, query, and inspect repositories safely.</li>
+                <li><strong>Local-First:</strong> Runs entirely on your machine &mdash; no external APIs or credentials required.</li>
+                <li><strong>Chunk-Aware Processing:</strong> Smart document processor for Markdown, Python, JavaScript, HTML, and more.</li>
+                <li><strong>Persistent Vector Store:</strong> Uses ChromaDB for durable, high-performance embeddings.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Quick Start</h2>
+            <p>RAGrep requires <strong>Python 3.9+</strong> and a working <code>pip</code> installation.</p>
+            <pre><code>git clone https://github.com/pierce403/ragrep.git
+cd ragrep
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -e .</code></pre>
+            <p>Install prerelease wheels for torch if your architecture is not covered by the default wheels.</p>
+        </section>
+
+        <section>
+            <h2>CLI Essentials</h2>
+            <pre><code># Index the current repository
+ragrep index
+
+# Index a specific directory
+ragrep index ./src
+
+# Retrieve relevant chunks
+ragrep dump "authentication middleware" --limit 5
+
+# Inspect vector store stats
+ragrep stats</code></pre>
+            <p>Use <code>--db-path</code> to point commands at a custom vector store directory and <code>--verbose</code> for richer progress logs.</p>
+        </section>
+
+        <section>
+            <h2>Project Highlights</h2>
+            <ul>
+                <li><strong>Vector Store:</strong> Built on <code>chromadb&nbsp;&ge;&nbsp;1.2.0</code> for Python 3.9&ndash;3.12 support.</li>
+                <li><strong>Embeddings:</strong> Powered by <code>sentence-transformers</code> and <code>torch</code>.</li>
+                <li><strong>Agent UX:</strong> Clean, deterministic CLI output optimized for machine consumption.</li>
+                <li><strong>CI/CD:</strong> GitHub Actions matrix builds across modern Python versions with automated packaging checks.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Stay in the Loop</h2>
+            <p>RAGrep is evolving quickly. Track updates, file issues, and contribute improvements:</p>
+            <ul>
+                <li><a href="https://github.com/pierce403/ragrep/issues" target="_blank" rel="noopener">Report issues or request features</a></li>
+                <li><a href="https://github.com/pierce403/ragrep/tree/main/docs" target="_blank" rel="noopener">Read additional documentation</a></li>
+                <li><a href="https://github.com/pierce403/ragrep/actions" target="_blank" rel="noopener">Follow build and release status</a></li>
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        &copy; <span id="year"></span> RAGrep Team. Licensed under MIT.
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>

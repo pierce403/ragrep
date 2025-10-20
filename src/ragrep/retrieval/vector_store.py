@@ -69,7 +69,6 @@ class _ChromadbBackend(_BaseBackend):
         if logger.isEnabledFor(logging.DEBUG):
             print("   🔄 Initializing ChromaDB vector database...")
         logger.info("Initializing ChromaDB vector database...")
-
         if self.persist_directory.exists():
             logger.info(
                 "Removing existing database at %s to avoid schema conflicts",
@@ -79,7 +78,6 @@ class _ChromadbBackend(_BaseBackend):
             self.persist_directory.mkdir(parents=True, exist_ok=True)
 
         persist_path = str(self.persist_directory)
-
         try:
             self.client = chromadb.PersistentClient(
                 path=persist_path,
@@ -87,7 +85,7 @@ class _ChromadbBackend(_BaseBackend):
             )
         except (TypeError, AttributeError) as exc:
             logger.warning(
-                "ChromaDB initialization with settings failed (Python 3.8 compatibility): %s",
+                "ChromaDB initialization with settings failed; falling back: %s",
                 exc,
             )
             try:

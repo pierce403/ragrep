@@ -20,7 +20,7 @@ RAGrep is a specialized command-line tool that enables AI agents to efficiently 
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.9 or higher
 - pip package manager
 
 ### Setup
