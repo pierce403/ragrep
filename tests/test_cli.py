@@ -24,6 +24,16 @@ class CLITests(unittest.TestCase):
             self.assertEqual(payload["backend"], "sqlite")
             self.assertEqual(payload["total_chunks"], 0)
 
+    def test_check_gpu_flag_alias(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            exit_code = main(["--check-gpu", "--json"])
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(output.getvalue())
+        self.assertIn("resolved_device", payload)
+        self.assertIn("torch_available", payload)
+
 
 if __name__ == "__main__":
     unittest.main()

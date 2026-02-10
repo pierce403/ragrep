@@ -37,6 +37,7 @@ RAGrep can use GPU for embeddings when available.
 - Override via CLI: `--device ...`
 - Override via Python API: `RAGrep(embedding_device="...")`
 - Note: GPU usage requires a GPU-capable PyTorch build in your environment.
+- Check runtime GPU support: `ragrep --check-gpu` (or `ragrep --check-gpu --json`)
 
 ## CLI Usage
 

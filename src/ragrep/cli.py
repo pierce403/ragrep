@@ -11,6 +11,7 @@ import sys
 from typing import List
 
 from .core.rag_system import RAGrep
+from .retrieval.embeddings import get_runtime_device_info
 
 
 def setup_logging(verbose: bool) -> None:
@@ -81,6 +82,35 @@ def _build_stats_parser() -> argparse.ArgumentParser:
     parser = _build_common_parser("Show index statistics")
     parser.add_argument("--json", action="store_true", help="Output JSON")
     return parser
+
+
+def _build_gpu_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Show GPU/device support for embeddings")
+    parser.add_argument(
+        "--device",
+        default=os.getenv("RAGREP_DEVICE", "auto"),
+        help="Requested embedding device: auto, cpu, cuda, mps, cuda:0, etc.",
+    )
+    parser.add_argument("--json", action="store_true", help="Output JSON")
+    return parser
+
+
+def _run_gpu_info(args: argparse.Namespace) -> int:
+    info = get_runtime_device_info(args.device)
+    if args.json:
+        print(json.dumps(info, indent=2))
+    else:
+        print(f"Requested: {info['requested_device']}")
+        print(f"Resolved: {info['resolved_device']}")
+        print(f"PyTorch available: {info['torch_available']}")
+        print(f"CUDA available: {info['cuda_available']}")
+        print(f"CUDA device count: {info['cuda_device_count']}")
+        if info["cuda_devices"]:
+            print("CUDA devices:")
+            for index, name in enumerate(info["cuda_devices"]):
+                print(f"  {index}: {name}")
+        print(f"MPS available: {info['mps_available']}")
+    return 0
 
 
 def _run_recall(args: argparse.Namespace) -> int:
@@ -184,6 +214,11 @@ def main(argv: List[str] | None = None) -> int:
 
     try:
         first = args_list[0]
+        if first in {"--check-gpu", "--gpu-info"}:
+            parser = _build_gpu_parser()
+            args = parser.parse_args(args_list[1:])
+            return _run_gpu_info(args)
+
         if first in {"--stats", "-s"}:
             parser = _build_stats_parser()
             args = parser.parse_args(args_list[1:])

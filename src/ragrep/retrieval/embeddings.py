@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Iterable, List
+from typing import Any, Dict, Iterable, List
 
 
 _MODEL_ALIASES = {
@@ -28,27 +28,64 @@ def resolve_runtime_device(requested: str | None = None) -> str:
     Supported values: ``auto``, ``cpu``, ``cuda``, ``mps`` (or explicit torch
     devices such as ``cuda:0``).
     """
-    value = (requested or os.getenv("RAGREP_DEVICE", "auto")).strip().lower()
-    if value and value != "auto":
-        return value
+    return str(get_runtime_device_info(requested)["resolved_device"])
+
+
+def get_runtime_device_info(requested: str | None = None) -> Dict[str, Any]:
+    """Return detailed runtime device support information."""
+    value = (requested or os.getenv("RAGREP_DEVICE", "auto")).strip().lower() or "auto"
+    explicit = value != "auto"
+
+    info: Dict[str, Any] = {
+        "requested_device": value,
+        "explicit_request": explicit,
+        "torch_available": False,
+        "cuda_available": False,
+        "cuda_device_count": 0,
+        "cuda_devices": [],
+        "mps_available": False,
+        "resolved_device": value if explicit else "cpu",
+    }
 
     try:
         import torch  # type: ignore
     except Exception:
-        return "cpu"
+        return info
 
     if torch is None:  # pragma: no cover - defensive guard
-        return "cpu"
+        return info
 
-    if hasattr(torch, "cuda") and torch.cuda.is_available():
-        return "cuda"
+    info["torch_available"] = True
+
+    cuda_available = bool(hasattr(torch, "cuda") and torch.cuda.is_available())
+    info["cuda_available"] = cuda_available
+    if cuda_available and hasattr(torch.cuda, "device_count"):
+        count = int(torch.cuda.device_count())
+        info["cuda_device_count"] = count
+        names: List[str] = []
+        if hasattr(torch.cuda, "get_device_name"):
+            for index in range(count):
+                try:
+                    names.append(str(torch.cuda.get_device_name(index)))
+                except Exception:
+                    names.append(f"cuda:{index}")
+        info["cuda_devices"] = names
 
     backends = getattr(torch, "backends", None)
     mps = getattr(backends, "mps", None) if backends is not None else None
-    if mps is not None and hasattr(mps, "is_available") and mps.is_available():
-        return "mps"
+    mps_available = bool(mps is not None and hasattr(mps, "is_available") and mps.is_available())
+    info["mps_available"] = mps_available
 
-    return "cpu"
+    if explicit:
+        info["resolved_device"] = value
+    elif cuda_available:
+        info["resolved_device"] = "cuda"
+    elif mps_available:
+        info["resolved_device"] = "mps"
+    else:
+        info["resolved_device"] = "cpu"
+
+    return info
 
 
 def default_model_dir() -> Path:

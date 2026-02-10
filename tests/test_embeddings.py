@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from ragrep.retrieval.embeddings import (
     default_model_dir,
+    get_runtime_device_info,
     resolve_embedding_model,
     resolve_runtime_device,
 )
@@ -51,6 +52,28 @@ class EmbeddingConfigTests(unittest.TestCase):
     def test_explicit_device_is_respected(self):
         self.assertEqual(resolve_runtime_device("cpu"), "cpu")
         self.assertEqual(resolve_runtime_device("cuda:0"), "cuda:0")
+
+    def test_runtime_device_info_without_torch(self):
+        with patch.dict(sys.modules, {"torch": None}):
+            info = get_runtime_device_info("auto")
+            self.assertFalse(info["torch_available"])
+            self.assertEqual(info["resolved_device"], "cpu")
+
+    def test_runtime_device_info_with_cuda_inventory(self):
+        fake_torch = SimpleNamespace(
+            cuda=SimpleNamespace(
+                is_available=lambda: True,
+                device_count=lambda: 2,
+                get_device_name=lambda i: f"GPU-{i}",
+            ),
+            backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False)),
+        )
+        with patch.dict(sys.modules, {"torch": fake_torch}):
+            info = get_runtime_device_info("auto")
+            self.assertTrue(info["torch_available"])
+            self.assertTrue(info["cuda_available"])
+            self.assertEqual(info["cuda_device_count"], 2)
+            self.assertEqual(info["cuda_devices"], ["GPU-0", "GPU-1"])
 
 
 if __name__ == "__main__":
