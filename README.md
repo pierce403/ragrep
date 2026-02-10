@@ -44,6 +44,9 @@ ragrep index .
 
 # Show stats
 ragrep stats
+
+# Stats alias
+ragrep --stats
 ```
 
 Useful flags:

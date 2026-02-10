@@ -35,13 +35,21 @@ class RAGrep:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.embedding_model = embedding_model
+        self.model_dir = model_dir
 
         self.document_processor = DocumentProcessor(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         self.vector_store = VectorStore(db_path)
-        self.embedder: _EmbedderProtocol = embedder or LocalEmbedder(
-            model=embedding_model,
-            model_dir=model_dir,
-        )
+        self._embedder: _EmbedderProtocol | None = embedder
+
+    @property
+    def embedder(self) -> _EmbedderProtocol:
+        """Return an embedding backend, loading it only when needed."""
+        if self._embedder is None:
+            self._embedder = LocalEmbedder(
+                model=self.embedding_model,
+                model_dir=self.model_dir,
+            )
+        return self._embedder
 
     def index(self, path: str = ".", *, force: bool = False) -> Dict[str, Any]:
         """Index files from a path into the local vector store."""

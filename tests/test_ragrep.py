@@ -105,6 +105,15 @@ class RAGrepTests(unittest.TestCase):
         finally:
             rag.close()
 
+    def test_stats_without_embedder_initialization(self):
+        rag = RAGrep(db_path=str(self.db_path))
+        try:
+            stats = rag.stats()
+            self.assertEqual(stats["backend"], "sqlite")
+            self.assertEqual(stats["total_chunks"], 0)
+        finally:
+            rag.close()
+
 
 if __name__ == "__main__":
     unittest.main()

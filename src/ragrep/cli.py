@@ -176,6 +176,11 @@ def main(argv: List[str] | None = None) -> int:
 
     try:
         first = args_list[0]
+        if first in {"--stats", "-s"}:
+            parser = _build_stats_parser()
+            args = parser.parse_args(args_list[1:])
+            return _run_stats(args)
+
         if first == "index":
             parser = _build_index_parser()
             args = parser.parse_args(args_list[1:])
