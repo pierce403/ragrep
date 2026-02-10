@@ -63,7 +63,12 @@ class DocumentProcessor:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def process_path(self, path: str) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], Path]:
+    def process_path(
+        self,
+        path: str,
+        *,
+        extra_ignore_paths: Iterable[Path] | None = None,
+    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], Path]:
         root = Path(path).resolve()
         if not root.exists():
             raise ValueError(f"Path does not exist: {path}")
@@ -73,7 +78,7 @@ class DocumentProcessor:
             scan_root = root.parent
         else:
             scan_root = root
-            files = self.scan_files(scan_root)
+            files = self.scan_files(scan_root, extra_ignore_paths=extra_ignore_paths)
 
         chunks: List[Dict[str, Any]] = []
         file_records = self.collect_file_records(files, scan_root)
@@ -85,12 +90,20 @@ class DocumentProcessor:
 
         return chunks, file_records, scan_root
 
-    def scan_files(self, root: Path) -> List[Path]:
+    def scan_files(
+        self,
+        root: Path,
+        *,
+        extra_ignore_paths: Iterable[Path] | None = None,
+    ) -> List[Path]:
         ignore_patterns = self._load_ignore_patterns(root)
+        resolved_ignores = [path.expanduser().resolve() for path in (extra_ignore_paths or [])]
         files: List[Path] = []
 
         for file_path in root.rglob("*"):
             if not file_path.is_file():
+                continue
+            if self._matches_extra_ignore(file_path.resolve(), resolved_ignores):
                 continue
             if file_path.suffix.lower() not in _DEFAULT_EXTENSIONS:
                 continue
@@ -200,4 +213,16 @@ class DocumentProcessor:
             if fnmatch.fnmatch(Path(path).name, normalized):
                 return True
 
+        return False
+
+    @staticmethod
+    def _matches_extra_ignore(file_path: Path, ignored_paths: Iterable[Path]) -> bool:
+        for ignored in ignored_paths:
+            if file_path == ignored:
+                return True
+            try:
+                file_path.relative_to(ignored)
+                return True
+            except ValueError:
+                continue
         return False

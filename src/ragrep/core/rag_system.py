@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, List, Protocol
 
 from .document_processor import DocumentProcessor
-from ..retrieval.embeddings import LocalEmbedder
+from ..retrieval.embeddings import LocalEmbedder, default_model_dir
 from ..retrieval.vector_store import VectorStore
 
 
@@ -54,9 +55,21 @@ class RAGrep:
             )
         return self._embedder
 
+    def _index_ignore_paths(self) -> List[Path]:
+        model_cache = Path(self.model_dir).expanduser().resolve() if self.model_dir else default_model_dir()
+        db_file = Path(self.vector_store.db_path).expanduser().resolve()
+        return [
+            model_cache,
+            db_file,
+            Path(f"{db_file}.legacy"),
+        ]
+
     def index(self, path: str = ".", *, force: bool = False) -> Dict[str, Any]:
         """Index files from a path into the local vector store."""
-        chunks, file_records, root_path = self.document_processor.process_path(path)
+        chunks, file_records, root_path = self.document_processor.process_path(
+            path,
+            extra_ignore_paths=self._index_ignore_paths(),
+        )
 
         if not force:
             needs_reindex, reason = self.vector_store.needs_reindex(
@@ -103,7 +116,7 @@ class RAGrep:
         query: str,
         *,
         limit: int = 20,
-        path: str = ".",
+        path: str | None = None,
         auto_index: bool = True,
     ) -> Dict[str, Any]:
         """Recall indexed chunks relevant to a query.
@@ -112,7 +125,8 @@ class RAGrep:
         """
         index_result: Dict[str, Any] | None = None
         if auto_index:
-            index_result = self.index(path, force=False)
+            effective_path = path or self.vector_store.get_indexed_root() or "."
+            index_result = self.index(effective_path, force=False)
 
         query_embedding = self.embedder.embed_query(query)
         matches = self.vector_store.search(query_embedding, limit=limit)

@@ -250,6 +250,9 @@ class VectorStore:
     def get_collection_info(self) -> Dict[str, Any]:
         return self.get_stats()
 
+    def get_indexed_root(self) -> str | None:
+        return self._get_metadata().get("indexed_root")
+
     def get_stats(self) -> Dict[str, Any]:
         metadata = self._get_metadata()
         total_chunks = self.connection.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]

@@ -63,7 +63,11 @@ def _build_recall_parser(prog: str = "ragrep") -> argparse.ArgumentParser:
     parser = _build_common_parser("Recall relevant chunks (auto-indexes when files changed)")
     parser.prog = prog
     parser.add_argument("query", nargs="+", help="Semantic query")
-    parser.add_argument("--path", default=".", help="Directory or file to index when needed")
+    parser.add_argument(
+        "--path",
+        default=None,
+        help="Directory or file to index when needed (defaults to existing indexed root, else current dir)",
+    )
     parser.add_argument("--limit", type=int, default=20, help="Maximum number of results")
     parser.add_argument("--no-auto-index", action="store_true", help="Disable automatic index updates")
     parser.add_argument("--json", action="store_true", help="Output JSON")

@@ -77,6 +77,17 @@ class RAGrepTests(unittest.TestCase):
         finally:
             rag.close()
 
+    def test_auto_index_uses_indexed_root_when_path_omitted(self):
+        rag = RAGrep(db_path=str(self.db_path), embedder=FakeEmbedder())
+        try:
+            rag.index(str(self.root))
+            recall_result = rag.recall("database query", auto_index=True)
+            self.assertFalse(recall_result["auto_index"]["indexed"])
+            self.assertEqual(recall_result["auto_index"]["reason"], "index is current")
+            self.assertEqual(recall_result["auto_index"]["root"], str(self.root))
+        finally:
+            rag.close()
+
     def test_auto_index_reindexes_after_file_change(self):
         rag = RAGrep(db_path=str(self.db_path), embedder=FakeEmbedder())
         try:
@@ -91,6 +102,30 @@ class RAGrepTests(unittest.TestCase):
             recall_result = rag.recall("payment auth", path=str(self.root), auto_index=True)
             self.assertTrue(recall_result["auto_index"]["indexed"])
             self.assertEqual(recall_result["auto_index"]["reason"], "indexed files changed")
+        finally:
+            rag.close()
+
+    def test_model_cache_changes_do_not_trigger_reindex(self):
+        model_dir = self.root / ".ragrep-model-cache"
+        model_dir.mkdir(parents=True, exist_ok=True)
+        (model_dir / "cache.json").write_text("{\"version\": 1}\n", encoding="utf-8")
+
+        rag = RAGrep(
+            db_path=str(self.db_path),
+            model_dir=str(model_dir),
+            embedder=FakeEmbedder(),
+        )
+        try:
+            index_result = rag.index(str(self.root))
+            self.assertEqual(index_result["files"], 2)
+
+            time.sleep(0.001)
+            (model_dir / "cache.json").write_text("{\"version\": 2}\n", encoding="utf-8")
+            (model_dir / "metadata.txt").write_text("updated\n", encoding="utf-8")
+
+            recall_result = rag.recall("database query", path=str(self.root), auto_index=True)
+            self.assertFalse(recall_result["auto_index"]["indexed"])
+            self.assertEqual(recall_result["auto_index"]["reason"], "index is current")
         finally:
             rag.close()
 

@@ -60,6 +60,9 @@ ragrep stats
 ragrep --stats
 ```
 
+When `--path` is omitted, auto-indexing uses the previously indexed root if one exists;
+otherwise it uses the current directory.
+
 Useful flags:
 
 ```bash
