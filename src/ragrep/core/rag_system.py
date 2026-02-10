@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Dict, List, Protocol
 
 from .document_processor import DocumentProcessor
-from ..retrieval.embeddings import OllamaEmbedder
+from ..retrieval.embeddings import LocalEmbedder
 from ..retrieval.vector_store import VectorStore
 
 
@@ -30,7 +29,7 @@ class RAGrep:
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
         embedding_model: str = "mxbai-embed-large",
-        ollama_base_url: str | None = None,
+        model_dir: str | None = None,
         embedder: _EmbedderProtocol | None = None,
     ) -> None:
         self.chunk_size = chunk_size
@@ -39,9 +38,9 @@ class RAGrep:
 
         self.document_processor = DocumentProcessor(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         self.vector_store = VectorStore(db_path)
-        self.embedder: _EmbedderProtocol = embedder or OllamaEmbedder(
+        self.embedder: _EmbedderProtocol = embedder or LocalEmbedder(
             model=embedding_model,
-            base_url=ollama_base_url,
+            model_dir=model_dir,
         )
 
     def index(self, path: str = ".", *, force: bool = False) -> Dict[str, Any]:

@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ragrep"
 version = "0.2.0"
-description = "Local semantic code recall with mxbai-embed-large and SQLite"
+description = "Local semantic code recall with mxbai embeddings and SQLite"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
     {name = "RAGrep Team", email = "ragrep@example.com"}
 ]
-keywords = ["semantic-search", "embeddings", "sqlite", "ollama", "code-search"]
+keywords = ["semantic-search", "embeddings", "sqlite", "code-search", "local"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -27,7 +27,9 @@ classifiers = [
     "Topic :: Text Processing :: Indexing",
 ]
 
-dependencies = []
+dependencies = [
+    "sentence-transformers>=3.0.0",
+]
 
 [project.optional-dependencies]
 dev = [

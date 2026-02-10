@@ -1,7 +1,7 @@
 # RAGrep Notes
 
 RAGrep is intentionally minimal:
-- embeddings from local Ollama (`mxbai-embed-large`)
+- in-process local embeddings (`mxbai-embed-large`)
 - storage in one SQLite file (`.ragrep.db`)
 - API: `index`, `recall`, `stats`
 

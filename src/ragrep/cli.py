@@ -44,7 +44,11 @@ def _build_common_parser(description: str) -> argparse.ArgumentParser:
         default=os.getenv("EMBEDDING_MODEL", "mxbai-embed-large"),
         help="Embedding model name",
     )
-    parser.add_argument("--ollama-url", default=os.getenv("OLLAMA_BASE_URL"), help="Ollama base URL")
+    parser.add_argument(
+        "--model-dir",
+        default=os.getenv("RAGREP_MODEL_DIR"),
+        help="Optional directory for downloaded embedding models",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
     return parser
 
@@ -83,7 +87,7 @@ def _run_recall(args: argparse.Namespace) -> int:
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
         embedding_model=args.model,
-        ollama_base_url=args.ollama_url,
+        model_dir=args.model_dir,
     ) as rag:
         result = rag.recall(
             query,
@@ -121,7 +125,7 @@ def _run_index(args: argparse.Namespace) -> int:
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
         embedding_model=args.model,
-        ollama_base_url=args.ollama_url,
+        model_dir=args.model_dir,
     ) as rag:
         result = rag.index(path=args.path, force=args.force)
 
@@ -145,7 +149,7 @@ def _run_stats(args: argparse.Namespace) -> int:
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
         embedding_model=args.model,
-        ollama_base_url=args.ollama_url,
+        model_dir=args.model_dir,
     ) as rag:
         result = rag.stats()
 

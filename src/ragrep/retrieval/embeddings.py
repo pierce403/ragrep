@@ -1,102 +1,104 @@
-"""Embedding client support for local Ollama models."""
+"""Local in-process embedding support for RAGrep."""
 
 from __future__ import annotations
 
-import json
 import os
+import sys
+from pathlib import Path
 from typing import Iterable, List
-from urllib import error, request
+
+
+_MODEL_ALIASES = {
+    "mxbai-embed-large": "mixedbread-ai/mxbai-embed-large-v1",
+}
 
 
 class EmbeddingError(RuntimeError):
     """Raised when embeddings cannot be generated."""
 
 
-class OllamaEmbedder:
-    """Generate embeddings via a local Ollama server."""
+def resolve_embedding_model(model: str) -> str:
+    """Resolve a short model alias into a full model identifier."""
+    return _MODEL_ALIASES.get(model, model)
+
+
+def default_model_dir() -> Path:
+    """Return the default local model storage directory.
+
+    Linux:  ~/.config/ragrep/models
+    macOS:  ~/Library/Application Support/ragrep/models
+    Windows: %APPDATA%/ragrep/models
+    """
+    configured = os.getenv("RAGREP_MODEL_DIR")
+    if configured:
+        return Path(configured).expanduser().resolve()
+
+    home = Path.home()
+
+    if sys.platform == "darwin":
+        base = home / "Library" / "Application Support" / "ragrep"
+    elif os.name == "nt":
+        appdata = os.getenv("APPDATA")
+        if appdata:
+            base = Path(appdata) / "ragrep"
+        else:
+            base = home / "AppData" / "Roaming" / "ragrep"
+    else:
+        base = home / ".config" / "ragrep"
+
+    return base / "models"
+
+
+class LocalEmbedder:
+    """Generate embeddings in-process using sentence-transformers."""
 
     def __init__(
         self,
         model: str = "mxbai-embed-large",
-        base_url: str | None = None,
-        timeout_seconds: float = 120.0,
+        model_dir: str | Path | None = None,
     ) -> None:
         self.model = model
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip("/")
-        self.timeout_seconds = timeout_seconds
+        self.resolved_model = resolve_embedding_model(model)
+        self.model_dir = Path(model_dir).expanduser().resolve() if model_dir else default_model_dir()
+        self.model_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            from sentence_transformers import SentenceTransformer
+        except Exception as exc:  # pragma: no cover - import path depends on environment
+            raise EmbeddingError(
+                "sentence-transformers is required for local embeddings. "
+                "Install with: pip install sentence-transformers"
+            ) from exc
+
+        try:
+            self._model = SentenceTransformer(
+                self.resolved_model,
+                cache_folder=str(self.model_dir),
+            )
+        except Exception as exc:  # pragma: no cover - model download/load depends on environment
+            raise EmbeddingError(
+                f"Failed to load embedding model '{self.resolved_model}'. "
+                f"Model directory: {self.model_dir}."
+            ) from exc
 
     def embed_texts(self, texts: Iterable[str], batch_size: int = 32) -> List[List[float]]:
         items = list(texts)
         if not items:
             return []
 
-        vectors: List[List[float]] = []
-        for index in range(0, len(items), batch_size):
-            batch = items[index:index + batch_size]
-            vectors.extend(self._embed_batch(batch))
-        return vectors
+        vectors = self._model.encode(
+            items,
+            batch_size=batch_size,
+            show_progress_bar=False,
+            normalize_embeddings=False,
+            convert_to_numpy=True,
+        )
+        return vectors.tolist()
 
     def embed_query(self, query: str) -> List[float]:
         vectors = self.embed_texts([query], batch_size=1)
         return vectors[0]
 
-    def _embed_batch(self, batch: List[str]) -> List[List[float]]:
-        payload = {"model": self.model, "input": batch}
 
-        try:
-            data = self._post_json("/api/embed", payload)
-            if isinstance(data.get("embeddings"), list):
-                return [self._coerce_vector(vector) for vector in data["embeddings"]]
-        except EmbeddingError as exc:
-            # Older Ollama versions exposed /api/embeddings only.
-            message = str(exc)
-            if "model" in message and "not found" in message:
-                raise EmbeddingError(
-                    f"Ollama model '{self.model}' is not available. "
-                    f"Run: ollama pull {self.model}"
-                ) from exc
-            if "HTTP 404" not in message:
-                raise
-
-        # Compatibility fallback for older Ollama API.
-        vectors: List[List[float]] = []
-        for text in batch:
-            legacy_data = self._post_json("/api/embeddings", {"model": self.model, "prompt": text})
-            if not isinstance(legacy_data.get("embedding"), list):
-                raise EmbeddingError("Ollama did not return an embedding vector")
-            vectors.append(self._coerce_vector(legacy_data["embedding"]))
-
-        return vectors
-
-    def _post_json(self, path: str, payload: dict) -> dict:
-        body = json.dumps(payload).encode("utf-8")
-        req = request.Request(
-            url=f"{self.base_url}{path}",
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            with request.urlopen(req, timeout=self.timeout_seconds) as response:
-                response_data = response.read().decode("utf-8")
-        except error.HTTPError as exc:
-            details = exc.read().decode("utf-8", errors="replace") if hasattr(exc, "read") else str(exc)
-            if "not found, try pulling it first" in details:
-                raise EmbeddingError(
-                    f"Ollama model '{self.model}' is not available. Run: ollama pull {self.model}"
-                ) from exc
-            raise EmbeddingError(f"Ollama request failed ({path}) HTTP {exc.code}: {details}") from exc
-        except error.URLError as exc:
-            raise EmbeddingError(
-                "Could not connect to Ollama at "
-                f"{self.base_url}. Start Ollama and run: ollama pull {self.model}"
-            ) from exc
-
-        try:
-            return json.loads(response_data)
-        except json.JSONDecodeError as exc:
-            raise EmbeddingError(f"Invalid JSON response from Ollama ({path})") from exc
-
-    @staticmethod
-    def _coerce_vector(vector: list) -> List[float]:
-        return [float(value) for value in vector]
+# Backward-compatible alias.
+OllamaEmbedder = LocalEmbedder

@@ -22,10 +22,11 @@ def __getattr__(name: str):
 
         return VectorStore
 
-    if name == "OllamaEmbedder":
-        from .retrieval.embeddings import OllamaEmbedder
+    if name in {"LocalEmbedder", "OllamaEmbedder"}:
+        # Keep OllamaEmbedder alias for backward compatibility.
+        from .retrieval.embeddings import LocalEmbedder
 
-        return OllamaEmbedder
+        return LocalEmbedder
 
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
@@ -35,5 +36,6 @@ __all__ = [
     "RAGSystem",
     "DocumentProcessor",
     "VectorStore",
+    "LocalEmbedder",
     "OllamaEmbedder",
 ]

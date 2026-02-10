@@ -3,7 +3,7 @@
 RAGrep is a dead-simple local semantic recall tool for code and text files.
 
 It uses:
-- `mxbai-embed-large` embeddings from a local Ollama server
+- `mxbai-embed-large` embeddings in-process (no server)
 - a single local SQLite database file: `.ragrep.db`
 
 No ChromaDB. No remote API keys.
@@ -14,14 +14,19 @@ No ChromaDB. No remote API keys.
 pip install ragrep
 ```
 
-## Prerequisites
+## Embedding Model Storage
 
-1. Install Ollama: https://ollama.com/download
-2. Pull the embedding model:
+RAGrep downloads the embedding model automatically on first use.
 
-```bash
-ollama pull mxbai-embed-large
-```
+Default model directories:
+- Linux: `~/.config/ragrep/models`
+- macOS: `~/Library/Application Support/ragrep/models`
+- Windows: `%APPDATA%\\ragrep\\models`
+
+Override with:
+- env var: `RAGREP_MODEL_DIR`
+- CLI flag: `--model-dir`
+- Python API: `RAGrep(model_dir="...")`
 
 ## CLI Usage
 
@@ -45,7 +50,7 @@ Useful flags:
 
 ```bash
 ragrep "query text" --path . --limit 10 --db-path ./.ragrep.db
-ragrep "query text" --json
+ragrep "query text" --model-dir ~/.config/ragrep/models --json
 ragrep index . --force
 ```
 
@@ -54,7 +59,10 @@ ragrep index . --force
 ```python
 from ragrep import RAGrep
 
-rag = RAGrep(db_path="./.ragrep.db")
+rag = RAGrep(
+    db_path="./.ragrep.db",
+    embedding_model="mxbai-embed-large",
+)
 rag.index(".")
 
 result = rag.recall("database transactions", limit=5)
@@ -86,7 +94,7 @@ RAGrep stores everything in one SQLite file (default `./.ragrep.db`):
 
 ```bash
 pip install -e .[dev]
-pytest
+python -m unittest discover -s tests -p 'test_*.py'
 python -m build
 twine check dist/*
 ```

@@ -1,2 +1,1 @@
-# Runtime dependencies are intentionally empty.
-# RAGrep uses only Python stdlib and a local Ollama server for embeddings.
+sentence-transformers>=3.0.0
