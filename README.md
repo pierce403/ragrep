@@ -28,6 +28,16 @@ Override with:
 - CLI flag: `--model-dir`
 - Python API: `RAGrep(model_dir="...")`
 
+## GPU Usage
+
+RAGrep can use GPU for embeddings when available.
+
+- Default behavior: `RAGREP_DEVICE=auto` (prefers `cuda`, then `mps`, then `cpu`)
+- Override via env: `RAGREP_DEVICE=cpu|cuda|mps|cuda:0`
+- Override via CLI: `--device ...`
+- Override via Python API: `RAGrep(embedding_device="...")`
+- Note: GPU usage requires a GPU-capable PyTorch build in your environment.
+
 ## CLI Usage
 
 Recall is the default command.
@@ -54,6 +64,7 @@ Useful flags:
 ```bash
 ragrep "query text" --path . --limit 10 --db-path ./.ragrep.db
 ragrep "query text" --model-dir ~/.config/ragrep/models --json
+ragrep "query text" --device auto
 ragrep index . --force
 ```
 
@@ -65,6 +76,7 @@ from ragrep import RAGrep
 rag = RAGrep(
     db_path="./.ragrep.db",
     embedding_model="mxbai-embed-large",
+    embedding_device="auto",
 )
 rag.index(".")
 

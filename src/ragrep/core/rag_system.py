@@ -30,12 +30,14 @@ class RAGrep:
         chunk_overlap: int = 200,
         embedding_model: str = "mxbai-embed-large",
         model_dir: str | None = None,
+        embedding_device: str | None = None,
         embedder: _EmbedderProtocol | None = None,
     ) -> None:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.embedding_model = embedding_model
         self.model_dir = model_dir
+        self.embedding_device = embedding_device
 
         self.document_processor = DocumentProcessor(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         self.vector_store = VectorStore(db_path)
@@ -48,6 +50,7 @@ class RAGrep:
             self._embedder = LocalEmbedder(
                 model=self.embedding_model,
                 model_dir=self.model_dir,
+                device=self.embedding_device,
             )
         return self._embedder
 

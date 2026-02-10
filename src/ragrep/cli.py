@@ -49,6 +49,11 @@ def _build_common_parser(description: str) -> argparse.ArgumentParser:
         default=os.getenv("RAGREP_MODEL_DIR"),
         help="Optional directory for downloaded embedding models",
     )
+    parser.add_argument(
+        "--device",
+        default=os.getenv("RAGREP_DEVICE", "auto"),
+        help="Embedding device: auto, cpu, cuda, mps, or explicit device (e.g. cuda:0)",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
     return parser
 
@@ -88,6 +93,7 @@ def _run_recall(args: argparse.Namespace) -> int:
         chunk_overlap=args.chunk_overlap,
         embedding_model=args.model,
         model_dir=args.model_dir,
+        embedding_device=args.device,
     ) as rag:
         result = rag.recall(
             query,
@@ -126,6 +132,7 @@ def _run_index(args: argparse.Namespace) -> int:
         chunk_overlap=args.chunk_overlap,
         embedding_model=args.model,
         model_dir=args.model_dir,
+        embedding_device=args.device,
     ) as rag:
         result = rag.index(path=args.path, force=args.force)
 
@@ -150,6 +157,7 @@ def _run_stats(args: argparse.Namespace) -> int:
         chunk_overlap=args.chunk_overlap,
         embedding_model=args.model,
         model_dir=args.model_dir,
+        embedding_device=args.device,
     ) as rag:
         result = rag.stats()
 
