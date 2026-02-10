@@ -66,49 +66,82 @@ class RAGrep:
 
     def index(self, path: str = ".", *, force: bool = False) -> Dict[str, Any]:
         """Index files from a path into the local vector store."""
-        chunks, file_records, root_path = self.document_processor.process_path(
+        files, file_records, root_path = self.document_processor.discover_path(
             path,
             extra_ignore_paths=self._index_ignore_paths(),
         )
+        plan = self.vector_store.plan_index_update(
+            root_path=root_path,
+            files=file_records,
+            embedding_model=self.embedding_model,
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
+            force=force,
+        )
 
-        if not force:
-            needs_reindex, reason = self.vector_store.needs_reindex(
+        if not plan["needs_index"]:
+            stats = self.vector_store.get_stats()
+            return {
+                "indexed": False,
+                "reason": plan["reason"],
+                "root": str(root_path),
+                "files": len(file_records),
+                "chunks": int(stats["total_chunks"]),
+                "chunks_indexed": 0,
+                "indexed_files": 0,
+                "new_files": [],
+                "updated_files": [],
+                "removed_files": [],
+                "full_rebuild": False,
+            }
+
+        if plan["full_rebuild"]:
+            chunks = self.document_processor.process_files(files, root_path)
+            texts = [chunk["text"] for chunk in chunks]
+            embeddings = self.embedder.embed_texts(texts) if texts else []
+            self.vector_store.replace_index(
                 root_path=root_path,
                 files=file_records,
+                chunks=chunks,
+                embeddings=embeddings,
                 embedding_model=self.embedding_model,
                 chunk_size=self.chunk_size,
                 chunk_overlap=self.chunk_overlap,
             )
-            if not needs_reindex:
-                return {
-                    "indexed": False,
-                    "reason": reason,
-                    "root": str(root_path),
-                    "files": len(file_records),
-                    "chunks": len(chunks),
-                }
         else:
-            reason = "forced reindex"
+            changed_paths = [
+                root_path / relative_path
+                for relative_path in (plan["new_files"] + plan["updated_files"])
+            ]
+            chunks = self.document_processor.process_files(changed_paths, root_path)
+            texts = [chunk["text"] for chunk in chunks]
+            embeddings = self.embedder.embed_texts(texts) if texts else []
+            self.vector_store.apply_file_updates(
+                root_path=root_path,
+                all_files=file_records,
+                chunks=chunks,
+                embeddings=embeddings,
+                new_files=plan["new_files"],
+                updated_files=plan["updated_files"],
+                removed_files=plan["removed_files"],
+                embedding_model=self.embedding_model,
+                chunk_size=self.chunk_size,
+                chunk_overlap=self.chunk_overlap,
+            )
 
-        texts = [chunk["text"] for chunk in chunks]
-        embeddings = self.embedder.embed_texts(texts) if texts else []
-
-        self.vector_store.replace_index(
-            root_path=root_path,
-            files=file_records,
-            chunks=chunks,
-            embeddings=embeddings,
-            embedding_model=self.embedding_model,
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-        )
-
+        stats = self.vector_store.get_stats()
         return {
             "indexed": True,
-            "reason": reason,
+            "reason": plan["reason"],
             "root": str(root_path),
             "files": len(file_records),
-            "chunks": len(chunks),
+            "chunks": int(stats["total_chunks"]),
+            "chunks_indexed": len(chunks),
+            "indexed_files": len(plan["new_files"]) + len(plan["updated_files"]),
+            "new_files": list(plan["new_files"]),
+            "updated_files": list(plan["updated_files"]),
+            "removed_files": list(plan["removed_files"]),
+            "full_rebuild": bool(plan["full_rebuild"]),
         }
 
     def recall(

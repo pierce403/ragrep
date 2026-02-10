@@ -69,6 +69,19 @@ class DocumentProcessor:
         *,
         extra_ignore_paths: Iterable[Path] | None = None,
     ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], Path]:
+        files, file_records, scan_root = self.discover_path(
+            path,
+            extra_ignore_paths=extra_ignore_paths,
+        )
+        chunks = self.process_files(files, scan_root)
+        return chunks, file_records, scan_root
+
+    def discover_path(
+        self,
+        path: str,
+        *,
+        extra_ignore_paths: Iterable[Path] | None = None,
+    ) -> tuple[List[Path], List[Dict[str, Any]], Path]:
         root = Path(path).resolve()
         if not root.exists():
             raise ValueError(f"Path does not exist: {path}")
@@ -80,15 +93,16 @@ class DocumentProcessor:
             scan_root = root
             files = self.scan_files(scan_root, extra_ignore_paths=extra_ignore_paths)
 
-        chunks: List[Dict[str, Any]] = []
         file_records = self.collect_file_records(files, scan_root)
+        return files, file_records, scan_root
 
+    def process_files(self, files: Iterable[Path], scan_root: Path) -> List[Dict[str, Any]]:
+        chunks: List[Dict[str, Any]] = []
         for file_path in files:
             relative_path = file_path.relative_to(scan_root).as_posix()
             text = self._load_text(file_path)
             chunks.extend(self._chunk_text(text, relative_path))
-
-        return chunks, file_records, scan_root
+        return chunks
 
     def scan_files(
         self,

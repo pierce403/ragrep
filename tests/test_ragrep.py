@@ -101,7 +101,29 @@ class RAGrepTests(unittest.TestCase):
 
             recall_result = rag.recall("payment auth", path=str(self.root), auto_index=True)
             self.assertTrue(recall_result["auto_index"]["indexed"])
-            self.assertEqual(recall_result["auto_index"]["reason"], "indexed files changed")
+            self.assertEqual(recall_result["auto_index"]["reason"], "updated files detected")
+            self.assertEqual(recall_result["auto_index"]["new_files"], [])
+            self.assertEqual(recall_result["auto_index"]["updated_files"], ["auth.py"])
+            self.assertGreater(recall_result["auto_index"]["chunks"], recall_result["auto_index"]["chunks_indexed"])
+        finally:
+            rag.close()
+
+    def test_auto_index_reindexes_after_new_file(self):
+        rag = RAGrep(db_path=str(self.db_path), embedder=FakeEmbedder())
+        try:
+            rag.index(str(self.root))
+            time.sleep(0.001)
+            (self.root / "new_feature.py").write_text(
+                "def new_feature_auth(token):\n    return token\n",
+                encoding="utf-8",
+            )
+
+            recall_result = rag.recall("new feature auth", path=str(self.root), auto_index=True)
+            self.assertTrue(recall_result["auto_index"]["indexed"])
+            self.assertEqual(recall_result["auto_index"]["reason"], "new files detected")
+            self.assertEqual(recall_result["auto_index"]["new_files"], ["new_feature.py"])
+            self.assertEqual(recall_result["auto_index"]["updated_files"], [])
+            self.assertEqual(recall_result["auto_index"]["indexed_files"], 1)
         finally:
             rag.close()
 

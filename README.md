@@ -63,6 +63,13 @@ ragrep --stats
 When `--path` is omitted, auto-indexing uses the previously indexed root if one exists;
 otherwise it uses the current directory.
 
+Indexing is incremental by default:
+- new files are added
+- modified files are re-embedded
+- removed files are deleted from the index
+
+CLI runs that index files print newly indexed file paths to stdout.
+
 Useful flags:
 
 ```bash

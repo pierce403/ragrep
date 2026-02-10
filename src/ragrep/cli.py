@@ -117,6 +117,15 @@ def _run_gpu_info(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_new_file_paths(index_result: dict) -> None:
+    new_files = index_result.get("new_files") or []
+    if not new_files:
+        return
+    print("New files indexed:")
+    for path in new_files:
+        print(path)
+
+
 def _run_recall(args: argparse.Namespace) -> int:
     setup_logging(args.verbose)
     query = " ".join(args.query).strip()
@@ -142,8 +151,10 @@ def _run_recall(args: argparse.Namespace) -> int:
 
     index_info = result.get("auto_index")
     if index_info and index_info.get("indexed"):
+        _print_new_file_paths(index_info)
         print(
-            f"Indexed {index_info['files']} files ({index_info['chunks']} chunks): "
+            f"Indexed {index_info['indexed_files']} changed files "
+            f"({index_info['chunks_indexed']} chunks updated, {index_info['chunks']} total): "
             f"{index_info['reason']}"
         )
 
@@ -175,7 +186,11 @@ def _run_index(args: argparse.Namespace) -> int:
         return 0
 
     if result["indexed"]:
-        print(f"Indexed {result['files']} files ({result['chunks']} chunks)")
+        _print_new_file_paths(result)
+        print(
+            f"Indexed {result['indexed_files']} changed files "
+            f"({result['chunks_indexed']} chunks updated, {result['chunks']} total)"
+        )
     else:
         print(f"Index unchanged: {result['reason']}")
 

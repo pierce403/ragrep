@@ -108,22 +108,27 @@ class VectorStore:
         chunk_size: int,
         chunk_overlap: int,
     ) -> Tuple[bool, str]:
+        plan = self.plan_index_update(
+            root_path=root_path,
+            files=files,
+            embedding_model=embedding_model,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            force=False,
+        )
+        return bool(plan["needs_index"]), str(plan["reason"])
+
+    def plan_index_update(
+        self,
+        *,
+        root_path: Path,
+        files: List[Dict[str, Any]],
+        embedding_model: str,
+        chunk_size: int,
+        chunk_overlap: int,
+        force: bool = False,
+    ) -> Dict[str, Any]:
         metadata = self._get_metadata()
-
-        if "indexed_root" not in metadata:
-            return True, "index has not been created yet"
-
-        if metadata.get("indexed_root") != str(root_path):
-            return True, "indexed root changed"
-
-        if metadata.get("embedding_model") != embedding_model:
-            return True, "embedding model changed"
-
-        if metadata.get("chunk_size") != str(chunk_size):
-            return True, "chunk size changed"
-
-        if metadata.get("chunk_overlap") != str(chunk_overlap):
-            return True, "chunk overlap changed"
 
         db_files = {
             row["path"]: (int(row["size"]), int(row["mtime_ns"]))
@@ -134,10 +139,93 @@ class VectorStore:
             for entry in files
         }
 
-        if db_files != current_files:
-            return True, "indexed files changed"
+        if force:
+            return {
+                "needs_index": True,
+                "full_rebuild": True,
+                "reason": "forced reindex",
+                "new_files": sorted(current_files.keys()),
+                "updated_files": [],
+                "removed_files": sorted(set(db_files) - set(current_files)),
+            }
 
-        return False, "index is current"
+        if "indexed_root" not in metadata:
+            return {
+                "needs_index": True,
+                "full_rebuild": True,
+                "reason": "index has not been created yet",
+                "new_files": sorted(current_files.keys()),
+                "updated_files": [],
+                "removed_files": sorted(set(db_files) - set(current_files)),
+            }
+
+        if metadata.get("indexed_root") != str(root_path):
+            return {
+                "needs_index": True,
+                "full_rebuild": True,
+                "reason": "indexed root changed",
+                "new_files": sorted(current_files.keys()),
+                "updated_files": [],
+                "removed_files": sorted(set(db_files) - set(current_files)),
+            }
+
+        if metadata.get("embedding_model") != embedding_model:
+            return {
+                "needs_index": True,
+                "full_rebuild": True,
+                "reason": "embedding model changed",
+                "new_files": sorted(current_files.keys()),
+                "updated_files": [],
+                "removed_files": sorted(set(db_files) - set(current_files)),
+            }
+
+        if metadata.get("chunk_size") != str(chunk_size):
+            return {
+                "needs_index": True,
+                "full_rebuild": True,
+                "reason": "chunk size changed",
+                "new_files": sorted(current_files.keys()),
+                "updated_files": [],
+                "removed_files": sorted(set(db_files) - set(current_files)),
+            }
+
+        if metadata.get("chunk_overlap") != str(chunk_overlap):
+            return {
+                "needs_index": True,
+                "full_rebuild": True,
+                "reason": "chunk overlap changed",
+                "new_files": sorted(current_files.keys()),
+                "updated_files": [],
+                "removed_files": sorted(set(db_files) - set(current_files)),
+            }
+
+        current_paths = set(current_files)
+        db_paths = set(db_files)
+
+        new_files = sorted(current_paths - db_paths)
+        removed_files = sorted(db_paths - current_paths)
+        updated_files = sorted(
+            path
+            for path in (current_paths & db_paths)
+            if current_files[path] != db_files[path]
+        )
+
+        reasons: List[str] = []
+        if new_files:
+            reasons.append("new files detected")
+        if updated_files:
+            reasons.append("updated files detected")
+        if removed_files:
+            reasons.append("files removed")
+
+        return {
+            "needs_index": bool(reasons),
+            "full_rebuild": False,
+            "reason": ", ".join(reasons) if reasons else "index is current",
+            "new_files": new_files,
+            "updated_files": updated_files,
+            "removed_files": removed_files,
+        }
 
     def replace_index(
         self,
@@ -167,6 +255,94 @@ class VectorStore:
                             int(entry["mtime_ns"]),
                         )
                         for entry in files
+                    ],
+                )
+
+            if chunks:
+                self.connection.executemany(
+                    """
+                    INSERT INTO chunks (
+                        id, file_path, chunk_index, start_char, end_char,
+                        text, metadata_json, embedding, embedding_dim, embedding_norm
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        (
+                            chunk["id"],
+                            chunk["file_path"],
+                            int(chunk["chunk_index"]),
+                            int(chunk["start_char"]),
+                            int(chunk["end_char"]),
+                            chunk["text"],
+                            json.dumps(chunk["metadata"], ensure_ascii=True),
+                            _pack_vector(vector),
+                            len(vector),
+                            _vector_norm(vector),
+                        )
+                        for chunk, vector in zip(chunks, embeddings)
+                    ],
+                )
+
+            now = datetime.now(timezone.utc).isoformat()
+            self._set_metadata("indexed_root", str(root_path))
+            self._set_metadata("embedding_model", embedding_model)
+            self._set_metadata("chunk_size", str(chunk_size))
+            self._set_metadata("chunk_overlap", str(chunk_overlap))
+            self._set_metadata("indexed_at", now)
+
+    def apply_file_updates(
+        self,
+        *,
+        root_path: Path,
+        all_files: List[Dict[str, Any]],
+        chunks: List[Dict[str, Any]],
+        embeddings: List[List[float]],
+        new_files: List[str],
+        updated_files: List[str],
+        removed_files: List[str],
+        embedding_model: str,
+        chunk_size: int,
+        chunk_overlap: int,
+    ) -> None:
+        if len(chunks) != len(embeddings):
+            raise ValueError("Chunk count and embedding count must match")
+
+        changed_paths = sorted(set(new_files + updated_files))
+        file_lookup = {entry["path"]: entry for entry in all_files}
+        missing_paths = [path for path in changed_paths if path not in file_lookup]
+        if missing_paths:
+            raise ValueError(f"Missing file records for changed paths: {missing_paths}")
+
+        with self.connection:
+            if removed_files:
+                self.connection.executemany(
+                    "DELETE FROM chunks WHERE file_path = ?",
+                    [(path,) for path in removed_files],
+                )
+                self.connection.executemany(
+                    "DELETE FROM files WHERE path = ?",
+                    [(path,) for path in removed_files],
+                )
+
+            if changed_paths:
+                self.connection.executemany(
+                    "DELETE FROM chunks WHERE file_path = ?",
+                    [(path,) for path in changed_paths],
+                )
+                self.connection.executemany(
+                    """
+                    INSERT INTO files (path, size, mtime_ns) VALUES (?, ?, ?)
+                    ON CONFLICT(path) DO UPDATE SET
+                        size = excluded.size,
+                        mtime_ns = excluded.mtime_ns
+                    """,
+                    [
+                        (
+                            path,
+                            int(file_lookup[path]["size"]),
+                            int(file_lookup[path]["mtime_ns"]),
+                        )
+                        for path in changed_paths
                     ],
                 )
 
