@@ -1,266 +1,96 @@
-# RAGrep - AI Agent File Navigator
+# RAGrep
 
-A command-line tool similar to `grep`, but designed for AI agents to index and navigate files/code using semantic search.
+RAGrep is a dead-simple local semantic recall tool for code and text files.
 
-## Overview
+It uses:
+- `mxbai-embed-large` embeddings from a local Ollama server
+- a single local SQLite database file: `.ragrep.db`
 
-RAGrep is a specialized command-line tool that enables AI agents to efficiently search and understand codebases through semantic indexing. Unlike traditional `grep` which searches for exact text matches, RAGrep uses vector embeddings to find semantically related content, making it perfect for AI agents that need to understand context and meaning.
+No ChromaDB. No remote API keys.
 
-## Features
+## Install
 
-- **Semantic Search**: Find content by meaning, not just exact text matches
-- **AI Agent Optimized**: Designed specifically for AI agents to navigate codebases
-- **Fully Local**: No external API keys or remote services required
-- **Fast Indexing**: Efficiently processes and indexes code files
-- **Multiple Formats**: Supports TXT, MD, PY, JS, HTML, CSS and other text formats
-- **Git Integration**: Respects `.gitignore` patterns automatically
-- **LLM-Ready Output**: Structured output perfect for feeding into other AI models
-
-## Installation
-
-### Prerequisites
-
-- Python 3.9 or higher
-- pip package manager
-
-### Setup
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/ragrep.git
-cd ragrep
+pip install ragrep
 ```
 
-2. Create a virtual environment:
+## Prerequisites
+
+1. Install Ollama: https://ollama.com/download
+2. Pull the embedding model:
+
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+ollama pull mxbai-embed-large
 ```
 
-3. Install the tool:
-```bash
-pip install -e .
-```
+## CLI Usage
 
-## Usage
-
-### Basic Commands
+Recall is the default command.
 
 ```bash
-# Index the current directory for semantic search
-ragrep index
+# Implied recall (auto-indexes when needed)
+ragrep "authentication middleware"
 
-# Index a specific directory
-ragrep index ./src
+# Explicit recall (same behavior)
+ragrep recall "authentication middleware"
 
-# Search for semantically related content
-ragrep dump "authentication logic" --limit 10
+# Build/update index manually
+ragrep index .
 
-# Show indexing statistics
+# Show stats
 ragrep stats
 ```
 
-### Command Reference
-
-#### `ragrep index [path]`
-Index files for semantic search. If no path is provided, indexes the current directory.
+Useful flags:
 
 ```bash
-# Index current directory
-ragrep index
-
-# Index specific directory
-ragrep index ./src
-
-# Index with verbose output
-ragrep index -v
+ragrep "query text" --path . --limit 10 --db-path ./.ragrep.db
+ragrep "query text" --json
+ragrep index . --force
 ```
 
-#### `ragrep dump <query> [options]`
-Search for semantically related content and output in LLM-ready format.
+## Python Usage
 
-```bash
-# Basic search
-ragrep dump "database connection"
+```python
+from ragrep import RAGrep
 
-# Limit results
-ragrep dump "error handling" --limit 5
+rag = RAGrep(db_path="./.ragrep.db")
+rag.index(".")
 
-# Search with verbose output
-ragrep dump "API endpoints" -v
+result = rag.recall("database transactions", limit=5)
+for match in result["matches"]:
+    print(match["score"], match["metadata"]["source"])
+
+print(rag.stats())
+rag.close()
 ```
 
-**Output Format:**
-```
-# Knowledge Base Dump for Query: 'database connection'
-# Found 3 relevant chunks
-================================================================================
+Library methods:
+- `index(path=".", force=False)`
+- `recall(query, limit=20, path=".", auto_index=True)`
+- `stats()`
 
-## Chunk 1 (Similarity: 0.892)
-**Source:** `src/database/connection.py`
-**Content:**
-"""Database connection management and pooling functionality."""
-...
+Backwards-compatible aliases still available:
+- `RAGSystem` (alias of `RAGrep`)
+- `dump(...)` (alias of `recall(..., auto_index=False)` result list)
 
-## Chunk 2 (Similarity: 0.756)
-**Source:** `src/config/database.py`
-**Content:**
-"""Database configuration and connection parameters."""
-...
-```
+## Local Database
 
-
-#### `ragrep stats [options]`
-Show statistics about the indexed knowledge base.
-
-```bash
-# Basic stats
-ragrep stats
-
-# Verbose output
-ragrep stats -v
-```
-
-**Output:**
-```
-📊 RAG System Statistics:
-========================================
-🗄️  Database: ./.ragrep.db
-📚 Documents in vector store: 47
-
-📁 Directory Scan:
-📄 Indexable files found: 23
-💾 Total size: 45,231 bytes
-```
-
-## Use Cases for AI Agents
-
-### Code Understanding
-```bash
-# Understand a specific feature
-ragrep dump "user registration flow" --limit 5
-
-# Find related functions
-ragrep dump "password hashing" --limit 3
-
-# Explore error handling patterns
-ragrep dump "exception handling" --limit 10
-```
-
-### Documentation Generation
-```bash
-# Understand API structure
-ragrep dump "API routes" --limit 15
-
-# Find configuration options
-ragrep dump "configuration settings" --limit 8
-
-# Explore module organization
-ragrep dump "module structure" --limit 10
-```
-
-### Debugging Support
-```bash
-# Find error-related code
-ragrep dump "error logging" --limit 5
-
-# Find test cases
-ragrep dump "unit tests" --limit 10
-
-# Explore data flow patterns
-ragrep dump "data flow" --limit 8
-```
-
-## Configuration
-
-The tool can be configured through environment variables:
-
-- `GENERATION_MODEL`: Hugging Face model name for text generation (default: microsoft/DialoGPT-medium)
-- `CHUNK_SIZE`: Size of document chunks (default: 1000)
-- `CHUNK_OVERLAP`: Overlap between chunks (default: 200)
-- `CUDA_AVAILABLE`: Set to "true" to use GPU acceleration (default: false)
-
-## How It Works
-
-1. **Indexing**: Files are processed and chunked into semantic units
-2. **Embedding**: Each chunk is converted to a vector embedding
-3. **Storage**: Embeddings are stored in a local SQLite database
-4. **Search**: Queries are converted to embeddings and matched against stored chunks
-5. **Output**: Results are formatted for easy consumption by AI agents
-
-## Comparison with grep
-
-| Feature | grep | RAGrep |
-|---------|------|--------|
-| Search Type | Exact text matching | Semantic similarity |
-| AI Agent Friendly | Limited | Optimized |
-| Context Understanding | None | High |
-| Code Navigation | Basic | Advanced |
-| Learning Curve | Low | Medium |
-
-## Examples
-
-### Finding Authentication Code
-```bash
-# Traditional grep approach
-grep -r "authenticate" src/
-
-# RAGrep semantic approach
-ragrep dump "user authentication system" --limit 5
-```
-
-### Understanding Database Layer
-```bash
-# Find related code
-ragrep dump "database models and schemas" --limit 8
-
-# Explore database connections
-ragrep dump "database connection" --limit 5
-```
-
-### Exploring API Endpoints
-```bash
-# Find all API-related code
-ragrep dump "REST API endpoints" --limit 10
-
-# Explore API structure
-ragrep dump "API structure" --limit 8
-```
+RAGrep stores everything in one SQLite file (default `./.ragrep.db`):
+- indexed files and mtimes
+- chunked source text
+- embedding vectors
+- index metadata (model, chunk settings, root path)
 
 ## Development
 
-### Project Structure
-
-```
-ragrep/
-├── src/
-│   └── ragrep/
-│       ├── core/          # Core functionality
-│       ├── retrieval/     # Vector search
-│       ├── generation/    # AI text generation
-│       └── cli.py         # Command-line interface
-├── examples/             # Usage examples
-├── docs/                 # Documentation
-└── requirements.txt      # Dependencies
-```
-
-### Running Tests
-
 ```bash
-pytest tests/
+pip install -e .[dev]
+pytest
+python -m build
+twine check dist/*
 ```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For questions, issues, or contributions:
-- Open an issue on GitHub
-- Check the examples in the `examples/` directory
-- Review the documentation in the `docs/` directory
-
----
-
-*RAGrep - Making codebases navigable for AI agents through semantic search.*
+MIT

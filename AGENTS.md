@@ -71,6 +71,12 @@ Retrieval-Augmented Generation (RAG) is a technique that combines the power of r
 - Implement query expansion and refinement
 - Add confidence indicators for generated responses
 
+## Operational Policy
+
+- After every completed task, commit all relevant changes.
+- Push commits to the remote repository immediately after committing.
+- Do not leave completed work only in local uncommitted state.
+
 ---
 
 *This file will be updated throughout the development process as new insights are gained.*

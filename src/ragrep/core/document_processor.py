@@ -1,267 +1,203 @@
-"""Document processing and chunking functionality."""
+"""Document loading and chunking utilities."""
 
 from __future__ import annotations
 
-import os
-import sys
-import time
-from typing import List, Dict, Any, Optional
-from pathlib import Path
-import logging
 import fnmatch
+from pathlib import Path
+from typing import Any, Dict, Iterable, List
 
-logger = logging.getLogger(__name__)
 
+_DEFAULT_EXTENSIONS = {
+    ".c",
+    ".cc",
+    ".cpp",
+    ".css",
+    ".go",
+    ".h",
+    ".hpp",
+    ".html",
+    ".java",
+    ".js",
+    ".json",
+    ".md",
+    ".py",
+    ".rb",
+    ".rs",
+    ".sql",
+    ".toml",
+    ".ts",
+    ".txt",
+    ".xml",
+    ".yaml",
+    ".yml",
+}
 
-class Spinner:
-    """Simple spinner for showing progress."""
-    
-    def __init__(self, message="Processing"):
-        self.message = message
-        self.spinner_chars = "|/-\\"
-        self.current_char = 0
-        self.start_time = time.time()
-        
-    def update(self, file_name, file_num, total_files):
-        """Update the spinner with current file info."""
-        elapsed = time.time() - self.start_time
-        spinner_char = self.spinner_chars[self.current_char % len(self.spinner_chars)]
-        self.current_char += 1
-        
-        # Clear the entire line and print the spinner
-        line = f"{spinner_char} {self.message} {file_num}/{total_files}: {file_name} ({elapsed:.1f}s)"
-        # Pad with spaces to clear any remaining characters
-        line = line.ljust(80)
-        sys.stdout.write(f"\r{line}")
-        sys.stdout.flush()
-        
-    def finish(self, file_name, file_num, total_files, chunks_created):
-        """Finish the spinner with final status."""
-        elapsed = time.time() - self.start_time
-        line = f"✅ Processed {file_num}/{total_files}: {file_name} ({chunks_created} chunks, {elapsed:.1f}s)"
-        # Clear the line first, then print the result
-        sys.stdout.write(f"\r{' ' * 80}\r{line}\n")
-        sys.stdout.flush()
+_DEFAULT_IGNORE_PATTERNS = {
+    ".git/",
+    "__pycache__/",
+    "*.pyc",
+    "*.sqlite",
+    "*.sqlite3",
+    "*.db",
+    ".ragrep.db",
+    ".ragrep.db.legacy/",
+    "venv/",
+    ".venv/",
+    "node_modules/",
+    "dist/",
+    "build/",
+}
 
 
 class DocumentProcessor:
-    """Handles document loading, preprocessing, and chunking."""
-    
-    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
-        """Initialize document processor.
-        
-        Args:
-            chunk_size: Maximum size of each text chunk
-            chunk_overlap: Number of characters to overlap between chunks
-        """
-        import time
-        start_time = time.time()
-        
+    """Read text files from disk and split them into overlapping chunks."""
+
+    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200) -> None:
+        if chunk_size <= 0:
+            raise ValueError("chunk_size must be > 0")
+        if chunk_overlap < 0:
+            raise ValueError("chunk_overlap must be >= 0")
+        if chunk_overlap >= chunk_size:
+            raise ValueError("chunk_overlap must be smaller than chunk_size")
+
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        
-        # Only show detailed output if logging level is DEBUG (verbose mode)
-        if logger.isEnabledFor(logging.DEBUG):
-            print(f"      🔄 Loading .gitignore patterns... [{time.strftime('%H:%M:%S')}]")
-        gitignore_start = time.time()
-        self.ignore_patterns = self._load_gitignore_patterns()
-        if logger.isEnabledFor(logging.DEBUG):
-            print(f"      ✅ .gitignore patterns loaded [{time.time() - gitignore_start:.2f}s]")
-            print(f"      ✅ DocumentProcessor ready [{time.time() - start_time:.2f}s total]")
-        
-    def _load_gitignore_patterns(self) -> List[str]:
-        """Load .gitignore patterns from the current directory and parent directories."""
-        patterns = []
-        current_dir = Path.cwd()
-        
-        # Walk up the directory tree to find .gitignore files
-        while current_dir != current_dir.parent:
-            gitignore_path = current_dir / '.gitignore'
-            if gitignore_path.exists():
-                try:
-                    with open(gitignore_path, 'r', encoding='utf-8') as f:
-                        for line in f:
-                            line = line.strip()
-                            if line and not line.startswith('#'):
-                                patterns.append(line)
-                except Exception as e:
-                    logger.warning(f"Error reading .gitignore at {gitignore_path}: {e}")
-            current_dir = current_dir.parent
-            
-        # Add some common patterns if no .gitignore found
-        if not patterns:
-            patterns = [
-                '__pycache__/',
-                '*.pyc',
-                '*.pyo',
-                '*.pyd',
-                '.Python',
-                'venv/',
-                'env/',
-                '.venv/',
-                '.env/',
-                'node_modules/',
-                '.git/',
-                '.DS_Store',
-                '*.log',
-                '.ragrep.db',
-                'data/',
-                '*.db',
-                '*.sqlite',
-                '*.sqlite3',
-                'vector_db/',
-                'test_vector_db/'
-            ]
-            
-        logger.info(f"Loaded {len(patterns)} ignore patterns")
-        return patterns
-    
-    def _should_ignore(self, file_path: Path) -> bool:
-        """Check if a file should be ignored based on .gitignore patterns."""
-        file_str = str(file_path)
-        relative_path = file_path.relative_to(Path.cwd()) if file_path.is_absolute() else file_path
-        
-        for pattern in self.ignore_patterns:
-            # Handle directory patterns (ending with /)
-            if pattern.endswith('/'):
-                # Check if any part of the path matches the directory pattern
-                if fnmatch.fnmatch(str(relative_path), pattern) or fnmatch.fnmatch(str(relative_path) + '/', pattern):
-                    return True
-                # Check if the pattern matches any parent directory
-                for part in relative_path.parts:
-                    if fnmatch.fnmatch(part + '/', pattern):
-                        return True
-            else:
-                # Handle file patterns - check both full path and just filename
-                if (fnmatch.fnmatch(str(relative_path), pattern) or 
-                    fnmatch.fnmatch(file_path.name, pattern) or
-                    fnmatch.fnmatch(str(relative_path), '*' + pattern)):
-                    return True
-                    
-        return False
-        
-    def load_document(self, file_path: str) -> str:
-        """Load text content from a file.
-        
-        Args:
-            file_path: Path to the document file
-            
-        Returns:
-            Text content of the document
-        """
-        try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                content = file.read()
-            return content
-        except Exception as e:
-            logger.error(f"Error loading document {file_path}: {e}")
-            raise
-    
-    def chunk_text(self, text: str, metadata: Dict[str, Any] = None) -> List[Dict[str, Any]]:
-        """Split text into overlapping chunks.
-        
-        Args:
-            text: Input text to chunk
-            metadata: Additional metadata to include with each chunk
-            
-        Returns:
-            List of chunk dictionaries with text and metadata
-        """
-        if metadata is None:
-            metadata = {}
-            
-        chunks = []
+
+    def process_path(self, path: str) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], Path]:
+        root = Path(path).resolve()
+        if not root.exists():
+            raise ValueError(f"Path does not exist: {path}")
+
+        if root.is_file():
+            files = [root]
+            scan_root = root.parent
+        else:
+            scan_root = root
+            files = self.scan_files(scan_root)
+
+        chunks: List[Dict[str, Any]] = []
+        file_records = self.collect_file_records(files, scan_root)
+
+        for file_path in files:
+            relative_path = file_path.relative_to(scan_root).as_posix()
+            text = self._load_text(file_path)
+            chunks.extend(self._chunk_text(text, relative_path))
+
+        return chunks, file_records, scan_root
+
+    def scan_files(self, root: Path) -> List[Path]:
+        ignore_patterns = self._load_ignore_patterns(root)
+        files: List[Path] = []
+
+        for file_path in root.rglob("*"):
+            if not file_path.is_file():
+                continue
+            if file_path.suffix.lower() not in _DEFAULT_EXTENSIONS:
+                continue
+
+            relative = file_path.relative_to(root).as_posix()
+            if self._should_ignore(relative, ignore_patterns):
+                continue
+
+            files.append(file_path)
+
+        files.sort()
+        return files
+
+    def collect_file_records(self, files: Iterable[Path], root: Path) -> List[Dict[str, Any]]:
+        records: List[Dict[str, Any]] = []
+
+        for file_path in files:
+            stat = file_path.stat()
+            records.append(
+                {
+                    "path": file_path.relative_to(root).as_posix(),
+                    "size": int(stat.st_size),
+                    "mtime_ns": int(stat.st_mtime_ns),
+                }
+            )
+
+        records.sort(key=lambda item: item["path"])
+        return records
+
+    def _chunk_text(self, text: str, relative_path: str) -> List[Dict[str, Any]]:
+        chunks: List[Dict[str, Any]] = []
         start = 0
-        
+
         while start < len(text):
-            end = start + self.chunk_size
+            end = min(start + self.chunk_size, len(text))
             chunk_text = text[start:end]
-            
-            chunk_metadata = metadata.copy()
-            chunk_metadata.update({
-                'chunk_index': len(chunks),
-                'start_char': start,
-                'end_char': end
-            })
-            
-            chunks.append({
-                'text': chunk_text,
-                'metadata': chunk_metadata
-            })
-            
-            # Move start position, accounting for overlap
-            start = end - self.chunk_overlap
-            
-            # Prevent infinite loop if chunk_overlap >= chunk_size
-            if start >= len(text):
+            chunk_index = len(chunks)
+            chunk_id = f"{relative_path}:{chunk_index}:{start}:{end}"
+
+            metadata = {
+                "source": relative_path,
+                "chunk_index": chunk_index,
+                "start_char": start,
+                "end_char": end,
+            }
+            chunks.append(
+                {
+                    "id": chunk_id,
+                    "file_path": relative_path,
+                    "chunk_index": chunk_index,
+                    "start_char": start,
+                    "end_char": end,
+                    "text": chunk_text,
+                    "metadata": metadata,
+                }
+            )
+
+            if end >= len(text):
                 break
-                
+            start = end - self.chunk_overlap
+
         return chunks
-    
-    def process_document(self, file_path: str) -> List[Dict[str, Any]]:
-        """Process a single document into chunks.
-        
-        Args:
-            file_path: Path to the document file
-            
-        Returns:
-            List of processed chunks
-        """
-        text = self.load_document(file_path)
-        metadata = {
-            'source': file_path,
-            'filename': os.path.basename(file_path)
-        }
-        return self.chunk_text(text, metadata)
-    
-    def process_directory(self, directory_path: str) -> List[Dict[str, Any]]:
-        """Process all text files in a directory.
-        
-        Args:
-            directory_path: Path to directory containing documents
-            
-        Returns:
-            List of all processed chunks from all documents
-        """
-        all_chunks = []
-        directory = Path(directory_path)
-        
-        # Supported file extensions
-        text_extensions = {'.txt', '.md', '.py', '.js', '.html', '.css'}
-        
-        files_to_process = []
-        for file_path in directory.rglob('*'):
-            if file_path.is_file() and file_path.suffix.lower() in text_extensions:
-                # Check if file should be ignored
-                if self._should_ignore(file_path):
-                    continue
-                files_to_process.append(file_path)
-        
-        if logger.isEnabledFor(logging.DEBUG):
-            print(f"📄 Found {len(files_to_process)} files to process")
-        logger.info(f"Found {len(files_to_process)} files to process")
-        
-        # Initialize spinner for file processing
-        spinner = Spinner("Processing files")
-        
-        for i, file_path in enumerate(files_to_process, 1):
-            # Show spinner for this file
-            spinner.update(file_path.name, i, len(files_to_process))
-            
-            try:
-                chunks = self.process_document(str(file_path))
-                all_chunks.extend(chunks)
-                # Just clear the spinner line and move to next file
-                sys.stdout.write(f"\r{' ' * 80}\r")
-                sys.stdout.flush()
-            except Exception as e:
-                # Clear spinner line and show error
-                error_line = f"❌ Failed {i}/{len(files_to_process)}: {file_path.name} - {e}"
-                sys.stdout.write(f"\r{' ' * 80}\r{error_line}\n")
-                sys.stdout.flush()
-                logger.warning(f"Failed to process {file_path}: {e}")
-        
-        if logger.isEnabledFor(logging.DEBUG):
-            print(f"📊 Processed {len(all_chunks)} total chunks from {len(files_to_process)} files")
-        logger.info(f"Processed {len(all_chunks)} chunks from {directory_path}")
-        return all_chunks
+
+    @staticmethod
+    def _load_text(file_path: Path) -> str:
+        return file_path.read_text(encoding="utf-8", errors="ignore")
+
+    @staticmethod
+    def _load_ignore_patterns(root: Path) -> List[str]:
+        patterns = set(_DEFAULT_IGNORE_PATTERNS)
+
+        current = root
+        while True:
+            gitignore = current / ".gitignore"
+            if gitignore.exists():
+                for line in gitignore.read_text(encoding="utf-8", errors="ignore").splitlines():
+                    stripped = line.strip()
+                    if not stripped or stripped.startswith("#"):
+                        continue
+                    patterns.add(stripped)
+            if current.parent == current:
+                break
+            current = current.parent
+
+        return sorted(patterns)
+
+    @staticmethod
+    def _should_ignore(relative_path: str, patterns: Iterable[str]) -> bool:
+        path = relative_path
+
+        for pattern in patterns:
+            if pattern.startswith("!"):
+                continue
+
+            normalized = pattern.strip()
+            if not normalized:
+                continue
+
+            if normalized.endswith("/"):
+                directory = normalized.rstrip("/")
+                if path == directory or path.startswith(directory + "/"):
+                    return True
+                continue
+
+            if fnmatch.fnmatch(path, normalized):
+                return True
+            if fnmatch.fnmatch(Path(path).name, normalized):
+                return True
+
+        return False

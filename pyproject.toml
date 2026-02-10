@@ -4,43 +4,36 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ragrep"
-version = "0.1.0"
-description = "AI Agent File Navigator - Semantic search tool similar to grep for AI agents"
+version = "0.2.0"
+description = "Local semantic code recall with mxbai-embed-large and SQLite"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "RAGrep Team", email = "ragrep@example.com"}
 ]
-keywords = ["ai", "semantic-search", "grep", "code-navigation", "rag", "vector-search"]
+keywords = ["semantic-search", "embeddings", "sqlite", "ollama", "code-search"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing :: Indexing",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 dependencies = []
 
 [project.optional-dependencies]
-retrieval = [
-    "chromadb>=1.2.0,<2.0",
-]
-generation = [
-    "transformers>=4.30.0",
-    "sentence-transformers>=2.2.0",
-    "torch>=2.0.0; python_version<'3.12'",
-]
-full = [
-    "ragrep[retrieval,generation]",
+dev = [
+    "pytest>=7.0",
+    "build>=1.2.0",
+    "twine>=5.0.0",
 ]
 
 [project.scripts]

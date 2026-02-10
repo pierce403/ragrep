@@ -3,189 +3,197 @@
 
 from __future__ import annotations
 
+import argparse
+import json
+import logging
 import os
 import sys
-import argparse
-import logging
-from pathlib import Path
+from typing import List
 
-# Lazy import to avoid heavy dependencies during CLI startup
-# from .core.rag_system import RAGSystem
+from .core.rag_system import RAGrep
 
 
-def setup_logging(verbose=False):
-    """Set up logging configuration."""
-    level = logging.DEBUG if verbose else logging.INFO
+def setup_logging(verbose: bool) -> None:
     logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.DEBUG if verbose else logging.WARNING,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
 
-def main():
-    """Main CLI entry point."""
-    parser = argparse.ArgumentParser(description="RAGrep - Retrieval-Augmented Generation Tool")
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+def _build_common_parser(description: str) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "--db-path",
+        default=os.getenv("RAGREP_DB_PATH", "./.ragrep.db"),
+        help="Path to local SQLite database",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=int(os.getenv("CHUNK_SIZE", "1000")),
+        help="Chunk size",
+    )
+    parser.add_argument(
+        "--chunk-overlap",
+        type=int,
+        default=int(os.getenv("CHUNK_OVERLAP", "200")),
+        help="Chunk overlap",
+    )
+    parser.add_argument(
+        "--model",
+        default=os.getenv("EMBEDDING_MODEL", "mxbai-embed-large"),
+        help="Embedding model name",
+    )
+    parser.add_argument("--ollama-url", default=os.getenv("OLLAMA_BASE_URL"), help="Ollama base URL")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
+    return parser
 
-    # Index documents command
-    index_parser = subparsers.add_parser('index', help='Index documents into knowledge base')
-    index_parser.add_argument('path', nargs='?', default='.', help='Path to document or directory (default: current directory)')
-    index_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
-    index_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
 
-    # Use unique database path in testing environments
-    if os.environ.get('GITHUB_ACTIONS') == 'true':
-        index_parser.set_defaults(db_path=f'./.ragrep_test_{os.getpid()}.db')
+def _build_recall_parser(prog: str = "ragrep") -> argparse.ArgumentParser:
+    parser = _build_common_parser("Recall relevant chunks (auto-indexes when files changed)")
+    parser.prog = prog
+    parser.add_argument("query", nargs="+", help="Semantic query")
+    parser.add_argument("--path", default=".", help="Directory or file to index when needed")
+    parser.add_argument("--limit", type=int, default=20, help="Maximum number of results")
+    parser.add_argument("--no-auto-index", action="store_true", help="Disable automatic index updates")
+    parser.add_argument("--json", action="store_true", help="Output JSON")
+    return parser
 
-    # Dump command
-    dump_parser = subparsers.add_parser('dump', help='Dump knowledge base contents matching query (no LLM processing)')
-    dump_parser.add_argument('query', help='Query to search for relevant chunks')
-    dump_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
-    dump_parser.add_argument('--limit', type=int, default=20, help='Maximum number of chunks to show (default: 20)')
-    dump_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
 
-    # Use unique database path in testing environments
-    if os.environ.get('GITHUB_ACTIONS') == 'true':
-        dump_parser.set_defaults(db_path=f'./.ragrep_test_{os.getpid()}.db')
+def _build_index_parser() -> argparse.ArgumentParser:
+    parser = _build_common_parser("Index a directory or file")
+    parser.add_argument("path", nargs="?", default=".", help="Path to index")
+    parser.add_argument("--force", action="store_true", help="Force a full re-index")
+    parser.add_argument("--json", action="store_true", help="Output JSON")
+    return parser
 
-    # Stats command
-    stats_parser = subparsers.add_parser('stats', help='Show system statistics')
-    stats_parser.add_argument('--db-path', default='./.ragrep.db', help='Vector database path')
-    stats_parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
 
-    # Use unique database path in testing environments
-    if os.environ.get('GITHUB_ACTIONS') == 'true':
-        stats_parser.set_defaults(db_path=f'./.ragrep_test_{os.getpid()}.db')
-    
-    args = parser.parse_args()
+def _build_stats_parser() -> argparse.ArgumentParser:
+    parser = _build_common_parser("Show index statistics")
+    parser.add_argument("--json", action="store_true", help="Output JSON")
+    return parser
 
-    if not args.command:
+
+def _run_recall(args: argparse.Namespace) -> int:
+    setup_logging(args.verbose)
+    query = " ".join(args.query).strip()
+
+    with RAGrep(
+        db_path=args.db_path,
+        chunk_size=args.chunk_size,
+        chunk_overlap=args.chunk_overlap,
+        embedding_model=args.model,
+        ollama_base_url=args.ollama_url,
+    ) as rag:
+        result = rag.recall(
+            query,
+            limit=args.limit,
+            path=args.path,
+            auto_index=not args.no_auto_index,
+        )
+
+    if args.json:
+        print(json.dumps(result, indent=2))
+        return 0
+
+    index_info = result.get("auto_index")
+    if index_info and index_info.get("indexed"):
+        print(
+            f"Indexed {index_info['files']} files ({index_info['chunks']} chunks): "
+            f"{index_info['reason']}"
+        )
+
+    matches = result.get("matches", [])
+    print(f"Results: {len(matches)}")
+    for position, match in enumerate(matches, start=1):
+        source = match.get("metadata", {}).get("source", "unknown")
+        print(f"{position}. score={match['score']:.4f} source={source}")
+        print(match.get("text", "").rstrip())
+
+    return 0
+
+
+def _run_index(args: argparse.Namespace) -> int:
+    setup_logging(args.verbose)
+
+    with RAGrep(
+        db_path=args.db_path,
+        chunk_size=args.chunk_size,
+        chunk_overlap=args.chunk_overlap,
+        embedding_model=args.model,
+        ollama_base_url=args.ollama_url,
+    ) as rag:
+        result = rag.index(path=args.path, force=args.force)
+
+    if args.json:
+        print(json.dumps(result, indent=2))
+        return 0
+
+    if result["indexed"]:
+        print(f"Indexed {result['files']} files ({result['chunks']} chunks)")
+    else:
+        print(f"Index unchanged: {result['reason']}")
+
+    return 0
+
+
+def _run_stats(args: argparse.Namespace) -> int:
+    setup_logging(args.verbose)
+
+    with RAGrep(
+        db_path=args.db_path,
+        chunk_size=args.chunk_size,
+        chunk_overlap=args.chunk_overlap,
+        embedding_model=args.model,
+        ollama_base_url=args.ollama_url,
+    ) as rag:
+        result = rag.stats()
+
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print(f"Database: {result['persist_path']}")
+        print(f"Indexed root: {result.get('indexed_root')}")
+        print(f"Embedding model: {result.get('embedding_model')}")
+        print(f"Files: {result['total_files']}")
+        print(f"Chunks: {result['total_chunks']}")
+        print(f"Indexed at: {result.get('indexed_at')}")
+
+    return 0
+
+
+def main(argv: List[str] | None = None) -> int:
+    args_list = list(argv) if argv is not None else sys.argv[1:]
+
+    if not args_list:
+        parser = _build_recall_parser()
         parser.print_help()
-        return
+        return 0
 
-    # Set up logging with verbose mode
-    verbose = getattr(args, 'verbose', False)
-    setup_logging(verbose=verbose)
-    
     try:
-        if args.command == 'index':
-            import time
-            start_time = time.time()
-            
-            if verbose:
-                print(f"🚀 Starting indexing process... [{time.strftime('%H:%M:%S')}]")
-                print(f"📁 Target path: {args.path}")
-                print(f"🗄️  Database: {args.db_path}")
-                print("=" * 60)
-                print("⚙️  Initializing indexing components...")
-                print("   📄 Setting up document processor...")
-            
-            doc_start = time.time()
-            # Only load document processor first - no vector store yet!
-            from .core.document_processor import DocumentProcessor
-            if verbose:
-                print(f"   ✅ DocumentProcessor imported [{time.time() - doc_start:.2f}s]")
-                print("   📄 Setting up document processor...")
-            
-            processor_start = time.time()
-            document_processor = DocumentProcessor()
-            if verbose:
-                print(f"   ✅ DocumentProcessor created [{time.time() - processor_start:.2f}s]")
-                print(f"✅ Document processing ready! [{time.time() - start_time:.2f}s total]")
-                print("=" * 60)
-            
-            # Process documents first (lightweight)
-            process_start = time.time()
-            if verbose:
-                print(f"📄 Starting document processing... [{time.strftime('%H:%M:%S')}]")
-            chunks = document_processor.process_directory(args.path)
-            if verbose:
-                print(f"✅ Document processing complete [{time.time() - process_start:.2f}s]")
-            
-            # Only now load vector store when we have documents to process
-            vector_start = time.time()
-            if verbose:
-                print(f"💾 Loading vector database... [{time.strftime('%H:%M:%S')}]")
-            from .retrieval.vector_store import VectorStore
-            vector_store = VectorStore(args.db_path)
-            if verbose:
-                print(f"✅ Vector store ready [{time.time() - vector_start:.2f}s]")
-            
-            # Add documents to vector store
-            vector_add_start = time.time()
-            if verbose:
-                print(f"💾 Adding documents to vector store... [{time.strftime('%H:%M:%S')}]")
-            vector_store.add_documents(chunks)
-            if verbose:
-                print(f"✅ Vector store operations complete [{time.time() - vector_add_start:.2f}s]")
-                print("=" * 60)
-            
-            print(f"✅ Successfully indexed {len(chunks)} chunks from {args.path}")
-            if verbose:
-                print(f"📊 Use 'ragrep stats' to see database statistics")
-            
-        elif args.command == 'dump':
-            # Only initialize vector store for dump command
-            from .retrieval.vector_store import VectorStore
-            vector_store = VectorStore(args.db_path)
-            chunks = vector_store.search(args.query, n_results=args.limit)
-            
-            print(f"# Knowledge Base Dump for Query: '{args.query}'")
-            print(f"# Found {len(chunks)} relevant chunks")
-            print("=" * 80)
-            
-            for i, chunk in enumerate(chunks, 1):
-                source = chunk['metadata'].get('source', 'Unknown')
-                similarity = chunk.get('distance', 0)
-                print(f"\n## Chunk {i} (Similarity: {similarity:.3f})")
-                print(f"**Source:** `{source}`")
-                print(f"**Content:**")
-                print(chunk['text'])
-                print("-" * 40)
-                
-        elif args.command == 'stats':
-            print("📊 RAG System Statistics:")
-            print("=" * 40)
-            
-            # Check if database exists
-            if os.path.exists(args.db_path):
-                print(f"🗄️  Database: {args.db_path}")
-                try:
-                    from .retrieval.vector_store import VectorStore
-                    vector_store = VectorStore(args.db_path)
-                    collection_info = vector_store.get_collection_info()
-                    print(f"📚 Documents in vector store: {collection_info['total_documents']}")
-                except Exception as e:
-                    print(f"⚠️  Could not read vector store: {e}")
-            else:
-                print(f"❌ No database found at: {args.db_path}")
-            
-            # Scan current directory for indexable files
-            print("\n📁 Directory Scan:")
-            from .core.file_scanner import FileScanner
-            scanner = FileScanner()
-            scan_results = scanner.scan_directory(".")
-            
-            print(f"📄 Indexable files found: {scan_results['total_files']}")
-            print(f"💾 Total size: {scan_results['total_size']:,} bytes")
-            
-            if scan_results['files']:
-                print(f"\n📋 File breakdown by type:")
-                extensions = {}
-                for file_info in scan_results['files']:
-                    ext = file_info['extension']
-                    if ext not in extensions:
-                        extensions[ext] = {'count': 0, 'size': 0}
-                    extensions[ext]['count'] += 1
-                    extensions[ext]['size'] += file_info['size']
-                
-                for ext, info in sorted(extensions.items()):
-                    print(f"   {ext}: {info['count']} files ({info['size']:,} bytes)")
-            
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+        first = args_list[0]
+        if first == "index":
+            parser = _build_index_parser()
+            args = parser.parse_args(args_list[1:])
+            return _run_index(args)
+
+        if first == "stats":
+            parser = _build_stats_parser()
+            args = parser.parse_args(args_list[1:])
+            return _run_stats(args)
+
+        if first == "recall":
+            parser = _build_recall_parser("ragrep recall")
+            args = parser.parse_args(args_list[1:])
+            return _run_recall(args)
+
+        parser = _build_recall_parser()
+        args = parser.parse_args(args_list)
+        return _run_recall(args)
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
