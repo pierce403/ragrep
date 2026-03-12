@@ -117,13 +117,40 @@ def _run_gpu_info(args: argparse.Namespace) -> int:
     return 0
 
 
-def _print_new_file_paths(index_result: dict) -> None:
-    new_files = index_result.get("new_files") or []
-    if not new_files:
+def _print_file_paths(title: str, paths: list[str]) -> None:
+    if not paths:
         return
-    print("New files indexed:")
-    for path in new_files:
+    print(f"{title}:")
+    for path in paths:
         print(path)
+
+
+def _print_index_status(index_result: dict) -> None:
+    root = index_result.get("root") or index_result.get("indexed_root") or "."
+    new_files = index_result.get("new_files") or []
+    updated_files = index_result.get("updated_files") or []
+    removed_files = index_result.get("removed_files") or []
+
+    if index_result.get("indexed"):
+        print(
+            f"Index updated for {root}: "
+            f"{len(new_files)} added, {len(updated_files)} modified, {len(removed_files)} removed."
+        )
+        _print_file_paths("Added files", new_files)
+        _print_file_paths("Modified files", updated_files)
+        _print_file_paths("Removed files", removed_files)
+        print(
+            f"Indexed {index_result['indexed_files']} changed files "
+            f"({index_result['chunks_indexed']} chunks updated, {index_result['chunks']} total): "
+            f"{index_result['reason']}"
+        )
+        return
+
+    print(
+        f"Index is already up to date for {root} "
+        f"({index_result['files']} files, {index_result['chunks']} chunks): "
+        f"{index_result['reason']}"
+    )
 
 
 def _run_recall(args: argparse.Namespace) -> int:
@@ -150,13 +177,8 @@ def _run_recall(args: argparse.Namespace) -> int:
         return 0
 
     index_info = result.get("auto_index")
-    if index_info and index_info.get("indexed"):
-        _print_new_file_paths(index_info)
-        print(
-            f"Indexed {index_info['indexed_files']} changed files "
-            f"({index_info['chunks_indexed']} chunks updated, {index_info['chunks']} total): "
-            f"{index_info['reason']}"
-        )
+    if index_info:
+        _print_index_status(index_info)
 
     matches = result.get("matches", [])
     print(f"Results: {len(matches)}")
@@ -185,14 +207,7 @@ def _run_index(args: argparse.Namespace) -> int:
         print(json.dumps(result, indent=2))
         return 0
 
-    if result["indexed"]:
-        _print_new_file_paths(result)
-        print(
-            f"Indexed {result['indexed_files']} changed files "
-            f"({result['chunks_indexed']} chunks updated, {result['chunks']} total)"
-        )
-    else:
-        print(f"Index unchanged: {result['reason']}")
+    _print_index_status(result)
 
     return 0
 
