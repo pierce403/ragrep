@@ -180,6 +180,31 @@ class RAGrepTests(unittest.TestCase):
         finally:
             rag.close()
 
+    def test_index_and_recall_markdown_variants(self):
+        docs_root = self.root / "docs"
+        docs_root.mkdir(parents=True, exist_ok=True)
+        (docs_root / "schema.mdx").write_text(
+            "# Schema\n\nUser field documentation.\n",
+            encoding="utf-8",
+        )
+        (docs_root / "database.markdown").write_text(
+            "# Database\n\nSchema for the user table.\n",
+            encoding="utf-8",
+        )
+
+        rag = RAGrep(db_path=str(self.db_path), embedder=FakeEmbedder())
+        try:
+            index_result = rag.index(str(docs_root))
+            self.assertTrue(index_result["indexed"])
+            self.assertEqual(index_result["files"], 2)
+
+            recall_result = rag.recall("schema user", limit=5, auto_index=False)
+            self.assertEqual(recall_result["count"], 2)
+            sources = {match["metadata"]["source"] for match in recall_result["matches"]}
+            self.assertEqual(sources, {"schema.mdx", "database.markdown"})
+        finally:
+            rag.close()
+
     def test_stats(self):
         rag = RAGrep(db_path=str(self.db_path), embedder=FakeEmbedder())
         try:
