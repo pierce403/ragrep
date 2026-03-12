@@ -115,6 +115,29 @@ def default_model_dir() -> Path:
     return base / "models"
 
 
+def _has_local_model_snapshot(model: str, model_dir: Path) -> bool:
+    """Return whether the requested model already exists in the local cache."""
+    model_path = Path(model).expanduser()
+    if model_path.exists():
+        return True
+
+    try:
+        from huggingface_hub import _CACHED_NO_EXIST, try_to_load_from_cache
+    except Exception:
+        return False
+
+    for filename in ("modules.json", "config.json", "tokenizer_config.json"):
+        cached = try_to_load_from_cache(
+            repo_id=model,
+            filename=filename,
+            cache_dir=str(model_dir),
+        )
+        if cached is not None and cached != _CACHED_NO_EXIST:
+            return True
+
+    return False
+
+
 class LocalEmbedder:
     """Generate embeddings in-process using sentence-transformers."""
 
@@ -139,17 +162,46 @@ class LocalEmbedder:
                 "Install with: pip install sentence-transformers"
             ) from exc
 
+        prefer_local_only = _has_local_model_snapshot(self.resolved_model, self.model_dir)
+
         try:
-            self._model = SentenceTransformer(
-                self.resolved_model,
-                cache_folder=str(self.model_dir),
-                device=self.device,
+            self._model = self._load_model(
+                SentenceTransformer,
+                local_files_only=prefer_local_only,
             )
         except Exception as exc:  # pragma: no cover - model download/load depends on environment
-            raise EmbeddingError(
-                f"Failed to load embedding model '{self.resolved_model}'. "
-                f"Model directory: {self.model_dir}."
-            ) from exc
+            if prefer_local_only:
+                try:
+                    self._model = self._load_model(
+                        SentenceTransformer,
+                        local_files_only=False,
+                    )
+                except Exception as retry_exc:
+                    raise EmbeddingError(
+                        f"Failed to load embedding model '{self.resolved_model}'. "
+                        f"Model directory: {self.model_dir}."
+                    ) from retry_exc
+            else:
+                raise EmbeddingError(
+                    f"Failed to load embedding model '{self.resolved_model}'. "
+                    f"Model directory: {self.model_dir}."
+                ) from exc
+
+    def _load_model(self, sentence_transformer_cls: Any, *, local_files_only: bool) -> Any:
+        kwargs: Dict[str, Any] = {
+            "cache_folder": str(self.model_dir),
+            "device": self.device,
+            "local_files_only": local_files_only,
+        }
+
+        try:
+            return sentence_transformer_cls(self.resolved_model, **kwargs)
+        except TypeError as exc:
+            if "local_files_only" not in str(exc):
+                raise
+
+        kwargs.pop("local_files_only", None)
+        return sentence_transformer_cls(self.resolved_model, **kwargs)
 
     def embed_texts(self, texts: Iterable[str], batch_size: int = 32) -> List[List[float]]:
         items = list(texts)

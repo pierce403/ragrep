@@ -20,6 +20,10 @@ class FakeEmbedder:
         "payment",
         "cache",
         "error",
+        "schema",
+        "user",
+        "message",
+        "type",
     ]
 
     def embed_texts(self, texts, batch_size: int = 32):
@@ -148,6 +152,31 @@ class RAGrepTests(unittest.TestCase):
             recall_result = rag.recall("database query", path=str(self.root), auto_index=True)
             self.assertFalse(recall_result["auto_index"]["indexed"])
             self.assertEqual(recall_result["auto_index"]["reason"], "index is current")
+        finally:
+            rag.close()
+
+    def test_index_and_recall_schema_files(self):
+        schema_root = self.root / "schemas"
+        schema_root.mkdir(parents=True, exist_ok=True)
+        (schema_root / "user.graphql").write_text(
+            "type User {\n  id: ID!\n  email: String!\n}\n",
+            encoding="utf-8",
+        )
+        (schema_root / "user.proto").write_text(
+            "syntax = \"proto3\";\nmessage User {\n  string id = 1;\n}\n",
+            encoding="utf-8",
+        )
+
+        rag = RAGrep(db_path=str(self.db_path), embedder=FakeEmbedder())
+        try:
+            index_result = rag.index(str(schema_root))
+            self.assertTrue(index_result["indexed"])
+            self.assertEqual(index_result["files"], 2)
+
+            recall_result = rag.recall("schema user", limit=5, auto_index=False)
+            self.assertEqual(recall_result["count"], 2)
+            sources = {match["metadata"]["source"] for match in recall_result["matches"]}
+            self.assertEqual(sources, {"user.graphql", "user.proto"})
         finally:
             rag.close()
 

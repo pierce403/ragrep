@@ -8,11 +8,15 @@ from typing import Any, Dict, Iterable, List
 
 
 _DEFAULT_EXTENSIONS = {
+    ".avsc",
     ".c",
     ".cc",
     ".cpp",
     ".css",
+    ".gql",
     ".go",
+    ".graphql",
+    ".graphqls",
     ".h",
     ".hpp",
     ".html",
@@ -22,12 +26,16 @@ _DEFAULT_EXTENSIONS = {
     ".md",
     ".py",
     ".rb",
+    ".raml",
     ".rs",
     ".sql",
     ".toml",
     ".ts",
     ".txt",
+    ".proto",
+    ".wsdl",
     ".xml",
+    ".xsd",
     ".yaml",
     ".yml",
 }
