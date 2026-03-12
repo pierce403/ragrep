@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAGrep &mdash; Retrieval-Augmented Code Search</title>
+    <title>RAGrep &mdash; Local Semantic Recall</title>
     <style>
         :root {
             color-scheme: light dark;
@@ -128,7 +128,7 @@
 <body>
     <header>
         <h1>RAGrep</h1>
-        <p>Semantic, retrieval-augmented search for codebases and knowledge repositories. RAGrep helps AI agents and developers index projects, run dense retrieval, and surface the right snippets without shipping data to external services.</p>
+        <p>Dead-simple local semantic recall for code and text files. RAGrep stores everything in a single SQLite database, runs <code>mxbai-embed-large</code> embeddings in process, and keeps indexing and retrieval on your machine.</p>
         <div class="cta-links">
             <a class="cta-button" href="https://github.com/pierce403/ragrep" target="_blank" rel="noopener">View on GitHub</a>
             <a class="cta-button" href="https://github.com/pierce403/ragrep/blob/main/README.md" target="_blank" rel="noopener">Full Documentation</a>
@@ -139,54 +139,57 @@
         <section>
             <h2>Key Features</h2>
             <ul>
-                <li><strong>Semantic Search:</strong> Vector-powered retrieval surfaces contextually relevant code and prose.</li>
-                <li><strong>Agent-Friendly CLI:</strong> Designed so automated agents can index, query, and inspect repositories safely.</li>
-                <li><strong>Local-First:</strong> Runs entirely on your machine &mdash; no external APIs or credentials required.</li>
-                <li><strong>Chunk-Aware Processing:</strong> Smart document processor for Markdown, Python, JavaScript, HTML, and more.</li>
-                <li><strong>Persistent Vector Store:</strong> Uses ChromaDB for durable, high-performance embeddings.</li>
+                <li><strong>Recall-First CLI:</strong> <code>ragrep "query"</code> is the default workflow and auto-indexes changed files when needed.</li>
+                <li><strong>Single-File Storage:</strong> Indexes, chunks, embeddings, and metadata live in one local SQLite file: <code>.ragrep.db</code>.</li>
+                <li><strong>Local Embeddings:</strong> Uses <code>mxbai-embed-large</code> in process with no remote API keys or external vector database.</li>
+                <li><strong>Incremental Updates:</strong> New, modified, and removed files are detected automatically instead of rebuilding the whole index every run.</li>
+                <li><strong>Device-Aware Runtime:</strong> Supports <code>cpu</code>, <code>cuda</code>, and <code>mps</code> via <code>--device</code>, with <code>--check-gpu</code> to inspect runtime support.</li>
             </ul>
         </section>
 
         <section>
             <h2>Quick Start</h2>
-            <p>RAGrep requires <strong>Python 3.9+</strong> and a working <code>pip</code> installation.</p>
-            <pre><code>git clone https://github.com/pierce403/ragrep.git
-cd ragrep
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -e .</code></pre>
-            <p>Install prerelease wheels for torch if your architecture is not covered by the default wheels.</p>
+            <p>RAGrep requires <strong>Python 3.9+</strong>. Install it directly from PyPI, then run a query against the current directory.</p>
+            <pre><code>pip install ragrep
+
+# First recall auto-indexes the project and downloads the embedding model on demand
+ragrep "authentication middleware"</code></pre>
+            <p>Override model storage with <code>RAGREP_MODEL_DIR</code> or <code>--model-dir</code>. GPU usage is optional and depends on your local PyTorch build.</p>
         </section>
 
         <section>
             <h2>CLI Essentials</h2>
-            <pre><code># Index the current repository
-ragrep index
+            <pre><code># Recall relevant chunks (default command; auto-indexes when files changed)
+ragrep "authentication middleware"
 
-# Index a specific directory
-ragrep index ./src
+# Explicit recall with a higher limit
+ragrep recall "authentication middleware" --limit 5
 
-# Retrieve relevant chunks
-ragrep dump "authentication middleware" --limit 5
+# Build or refresh the index manually
+ragrep index .
 
-# Inspect vector store stats
-ragrep stats</code></pre>
-            <p>Use <code>--db-path</code> to point commands at a custom vector store directory and <code>--verbose</code> for richer progress logs.</p>
+# Inspect index statistics
+ragrep stats
+ragrep --stats
+
+# Check GPU/device support
+ragrep --check-gpu</code></pre>
+            <p>Useful flags include <code>--path</code>, <code>--db-path</code>, <code>--model-dir</code>, <code>--device</code>, <code>--json</code>, <code>--no-auto-index</code>, and <code>--force</code> for a full rebuild.</p>
         </section>
 
         <section>
             <h2>Project Highlights</h2>
             <ul>
-                <li><strong>Vector Store:</strong> Built on <code>chromadb&nbsp;&ge;&nbsp;1.2.0</code> for Python 3.9&ndash;3.12 support.</li>
-                <li><strong>Embeddings:</strong> Powered by <code>sentence-transformers</code> and <code>torch</code>.</li>
-                <li><strong>Agent UX:</strong> Clean, deterministic CLI output optimized for machine consumption.</li>
-                <li><strong>CI/CD:</strong> GitHub Actions matrix builds across modern Python versions with automated packaging checks.</li>
+                <li><strong>Current Release:</strong> Version <code>0.2.1</code> targets Python 3.9 through 3.13.</li>
+                <li><strong>Storage Model:</strong> The local database tracks indexed files, chunk text, embedding vectors, and index metadata in one place.</li>
+                <li><strong>Backwards Compatibility:</strong> Legacy aliases such as <code>RAGSystem</code> and <code>dump(...)</code> still exist, but <code>recall</code> is the primary interface.</li>
+                <li><strong>Automation Ready:</strong> JSON output, deterministic CLI formatting, and GitHub Actions workflows make it suitable for scripts and agent-driven tooling.</li>
             </ul>
         </section>
 
         <section>
             <h2>Stay in the Loop</h2>
-            <p>RAGrep is evolving quickly. Track updates, file issues, and contribute improvements:</p>
+            <p>Track releases, file issues, and follow the implementation details:</p>
             <ul>
                 <li><a href="https://github.com/pierce403/ragrep/issues" target="_blank" rel="noopener">Report issues or request features</a></li>
                 <li><a href="https://github.com/pierce403/ragrep/tree/main/docs" target="_blank" rel="noopener">Read additional documentation</a></li>
