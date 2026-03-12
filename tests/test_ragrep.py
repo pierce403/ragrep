@@ -205,6 +205,30 @@ class RAGrepTests(unittest.TestCase):
         finally:
             rag.close()
 
+    def test_index_subdirectory_does_not_inherit_parent_gitignore(self):
+        (self.root / ".gitignore").write_text("*\n", encoding="utf-8")
+        docs_root = self.root / "docs"
+        docs_root.mkdir(parents=True, exist_ok=True)
+        (docs_root / "storage-schema.md").write_text(
+            "# Storage Schema\n\nUser table and field definitions.\n",
+            encoding="utf-8",
+        )
+
+        rag = RAGrep(db_path=str(self.db_path), embedder=FakeEmbedder())
+        try:
+            index_result = rag.index(str(docs_root))
+            self.assertTrue(index_result["indexed"])
+            self.assertEqual(index_result["files"], 1)
+
+            recall_result = rag.recall("schema user", limit=5, auto_index=False)
+            self.assertEqual(recall_result["count"], 1)
+            self.assertEqual(
+                recall_result["matches"][0]["metadata"]["source"],
+                "storage-schema.md",
+            )
+        finally:
+            rag.close()
+
     def test_stats(self):
         rag = RAGrep(db_path=str(self.db_path), embedder=FakeEmbedder())
         try:

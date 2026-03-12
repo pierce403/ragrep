@@ -202,18 +202,13 @@ class DocumentProcessor:
     def _load_ignore_patterns(root: Path) -> List[str]:
         patterns = set(_DEFAULT_IGNORE_PATTERNS)
 
-        current = root
-        while True:
-            gitignore = current / ".gitignore"
-            if gitignore.exists():
-                for line in gitignore.read_text(encoding="utf-8", errors="ignore").splitlines():
-                    stripped = line.strip()
-                    if not stripped or stripped.startswith("#"):
-                        continue
-                    patterns.add(stripped)
-            if current.parent == current:
-                break
-            current = current.parent
+        gitignore = root / ".gitignore"
+        if gitignore.exists():
+            for line in gitignore.read_text(encoding="utf-8", errors="ignore").splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                patterns.add(stripped)
 
         return sorted(patterns)
 
